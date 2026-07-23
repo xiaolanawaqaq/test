@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>合兵塔防 · 三人联机</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;height:100dvh;background:#1a1d29;color:#e8ebf0;font-family:"Segoe UI","Microsoft YaHei",sans-serif;overflow:hidden;touch-action:none;overscroll-behavior:none}
+  #app{display:flex;flex-direction:column;width:100%;height:100%;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+  button,input{font:inherit}
+  button{border:none;border-radius:10px;background:#3b82f6;color:#fff;font-weight:700;min-height:44px;padding:10px 16px;cursor:pointer;touch-action:manipulation}
+  button.secondary{background:#2c3244}
+  button:disabled{background:#3a4157;color:#6b7488;cursor:default}
+  input{width:100%;min-height:44px;border-radius:10px;border:1px solid #3a4157;background:#12151c;color:#e8ebf0;padding:10px 12px}
+  .panel{max-width:520px;width:min(96vw,520px);margin:auto;background:#232838;border:1px solid #3a4157;border-radius:16px;padding:18px;display:none}
+  .panel.active{display:block}
+  .panel h1{font-size:22px;margin-bottom:8px}
+  .panel p,.muted{color:#8b93a7;font-size:13px;line-height:1.5}
+  .row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .row > *{flex:1}
+  .status{margin-top:10px;font-size:13px;color:#4fd1ff}
+  .err{margin-top:10px;font-size:13px;color:#f43f5e;min-height:18px}
+  .players{display:grid;gap:8px;margin-top:12px}
+  .player{display:flex;justify-content:space-between;align-items:center;background:#12151c;border-radius:10px;padding:10px 12px}
+  .player .tag{font-size:12px;color:#8b93a7}
+  .codeBox{background:#12151c;border-radius:10px;padding:12px;margin-top:10px}
+  .codeBox strong{font-size:24px;letter-spacing:3px;color:#7ee787}
+  .link{font-size:12px;word-break:break-all;color:#b6bccb;margin-top:6px}
+  #stage{display:none;flex-direction:column;width:min(960px,100%);height:100%;margin:0 auto}
+  #stage.active{display:flex}
+  #hud{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 10px;background:#232838;border-bottom:2px solid #3a4157}
+  #hud .stat{display:flex;gap:4px;align-items:center;white-space:nowrap}
+  #hud .lbl{color:#8b93a7;font-size:11px}
+  #hud .val{font-weight:700}
+  #playersBar{width:100%;display:flex;gap:6px;flex-wrap:wrap}
+  #playersBar .chip{background:#12151c;border-radius:999px;padding:4px 10px;font-size:12px}
+  #canvasBox{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;background:#12151c}
+  canvas{width:100%;height:auto;max-height:100%;background:#20242f;touch-action:none;display:block}
+  #tray{min-height:96px;max-height:28vh;background:#232838;border-top:2px solid #3a4157;display:flex;align-items:center;padding:6px 10px;gap:8px}
+  #tray .title{color:#8b93a7;font-size:11px;writing-mode:vertical-lr}
+  #trayItems{display:flex;gap:8px;overflow-x:auto;flex:1;align-items:center;touch-action:pan-x}
+  .trayTroop{width:76px;min-height:84px;border-radius:10px;background:#2c3244;border:2px solid #4fd1ff;display:flex;flex-direction:column;align-items:center;justify-content:center;touch-action:none;padding:4px;flex:0 0 auto}
+  #msg{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:40}
+  #msg .box{background:rgba(20,23,34,.96);border:2px solid #3b82f6;border-radius:14px;padding:22px;width:min(92vw,420px);text-align:center}
+  #msg h2{margin-bottom:8px}
+  #msg p{color:#b6bccb;margin-bottom:14px}
+  #conn{position:fixed;left:10px;bottom:10px;font-size:12px;color:#8b93a7;z-index:20}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="home" class="panel active">
+    <h1>合兵塔防 · 三人联机</h1>
+    <p>三人各自手机联网，共用路线、妖怪和水晶。先创建房间，再让朋友用房间码或邀请链接加入。</p>
+    <div class="row"><input id="nameInput" maxlength="20" placeholder="你的昵称（可选）"></div>
+    <div class="row">
+      <button id="btnCreate">创建房间</button>
+      <button id="btnSolo" class="secondary" type="button">返回单机</button>
+    </div>
+    <div class="row">
+      <input id="codeInput" maxlength="8" placeholder="输入6位房间码">
+      <button id="btnJoin" class="secondary">加入房间</button>
+    </div>
+    <div class="status" id="homeStatus">连接中…</div>
+    <div class="err" id="homeErr"></div>
+  </div>
+
+  <div id="lobby" class="panel">
+    <h1>房间大厅</h1>
+    <div class="codeBox">
+      <div class="muted">房间码</div>
+      <strong id="roomCode">------</strong>
+      <div class="link" id="inviteLink"></div>
+    </div>
+    <div class="row">
+      <button id="btnCopyCode" class="secondary">复制房间码</button>
+      <button id="btnCopyLink" class="secondary">复制邀请链接</button>
+    </div>
+    <div class="players" id="playerList"></div>
+    <div class="row">
+      <button id="btnReady">准备</button>
+      <button id="btnStart" disabled>开始游戏</button>
+    </div>
+    <div class="row">
+      <button id="btnLeave" class="secondary">离开房间</button>
+    </div>
+    <div class="status" id="lobbyStatus"></div>
+    <div class="err" id="lobbyErr"></div>
+  </div>
+
+  <div id="stage">
+    <div id="hud">
+      <div class="stat"><span class="lbl">关卡</span><span class="val" id="uiLevel">1</span></div>
+      <div class="stat"><span class="lbl">妖怪</span><span class="val" id="uiWave">0/20</span></div>
+      <div class="stat"><span class="lbl">水晶</span><span class="val" id="uiCrystals">10</span></div>
+      <div class="stat"><span class="lbl">阶段</span><span class="val" id="uiPhase">备战</span></div>
+      <div class="stat"><span class="lbl">倒计时</span><span class="val" id="uiTimer">--</span></div>
+      <div id="playersBar"></div>
+    </div>
+    <div id="canvasBox"><canvas id="gameCanvas" width="960" height="576"></canvas></div>
+    <div id="tray">
+      <div class="title">我的待命</div>
+      <div id="trayItems"></div>
+    </div>
+  </div>
+</div>
+
+<div id="msg"><div class="box"><h2 id="msgTitle"></h2><p id="msgText"></p><div class="row"><button id="msgRematch">再来一局</button><button id="msgHome" class="secondary">回大厅</button></div></div></div>
+<div id="conn">离线</div>
+
+<script src="/client/network-client.js"></script>
+<script>
+"use strict";
+
+const CV_W=960, CV_H=576, CELL=64, MAX_LEVEL=6, WAVE_SIZE=20, START_CRYSTALS=10;
+const LEVEL_COLORS=["#ffffff","#7ee787","#4fd1ff","#c084fc","#fb923c","#f43f5e"];
+const PATH=[{x:40,y:70},{x:860,y:70},{x:860,y:180},{x:100,y:180},{x:100,y:290},{x:860,y:290},{x:860,y:400},{x:100,y:400},{x:100,y:510},{x:520,y:510}];
+const SLOTS=[];
+(function(){
+  const bandY=[125,235,345,455], startX=150, gap=CELL+6, cols=8;
+  bandY.forEach(y=>{ for(let c=0;c<cols;c++) SLOTS.push({x:startX+c*gap,y,troop:null}); });
+})();
+
+const canvas=document.getElementById("gameCanvas");
+const ctx=canvas.getContext("2d");
+const trayEl=document.getElementById("trayItems");
+const ui={
+  home:document.getElementById("home"),
+  lobby:document.getElementById("lobby"),
+  stage:document.getElementById("stage"),
+  homeStatus:document.getElementById("homeStatus"),
+  homeErr:document.getElementById("homeErr"),
+  lobbyStatus:document.getElementById("lobbyStatus"),
+  lobbyErr:document.getElementById("lobbyErr"),
+  roomCode:document.getElementById("roomCode"),
+  inviteLink:document.getElementById("inviteLink"),
+  playerList:document.getElementById("playerList"),
+  btnReady:document.getElementById("btnReady"),
+  btnStart:document.getElementById("btnStart"),
+  conn:document.getElementById("conn"),
+  level:document.getElementById("uiLevel"),
+  wave:document.getElementById("uiWave"),
+  crystals:document.getElementById("uiCrystals"),
+  phase:document.getElementById("uiPhase"),
+  timer:document.getElementById("uiTimer"),
+  playersBar:document.getElementById("playersBar"),
+  msg:document.getElementById("msg"),
+  msgTitle:document.getElementById("msgTitle"),
+  msgText:document.getElementById("msgText"),
+};
+
+const me={id:null, name:""};
+let room=null;
+let state=null;
+let lastRevision=-1;
+let localTray=[];
+const drag={active:false,troop:null,from:null,mx:0,my:0,pointerId:null};
+const ghostEl=document.createElement("div");
+ghostEl.style.cssText="position:fixed;pointer-events:none;z-index:80;display:none;width:72px;height:72px;border-radius:12px;background:rgba(44,50,68,.95);border:2px solid #4fd1ff;align-items:center;justify-content:center;flex-direction:column;transform:translate(-50%,-60%)";
+document.body.appendChild(ghostEl);
+
+function setScreen(name){
+  ui.home.classList.toggle("active", name==="home");
+  ui.lobby.classList.toggle("active", name==="lobby");
+  ui.stage.classList.toggle("active", name==="stage");
+  if(name==="stage") ui.stage.style.display="flex";
+  else ui.stage.style.display="none";
+}
+function showErr(where,msg){ (where==="home"?ui.homeErr:ui.lobbyErr).textContent=msg||""; }
+function inviteUrl(token){
+  const u=new URL(location.href);
+  u.searchParams.set("room", token);
+  return u.toString();
+}
+function copyText(text){
+  if(navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
+  const ta=document.createElement("textarea"); ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove();
+  return Promise.resolve();
+}
+
+const net=new NetworkClient({
+  onStatus(s){
+    ui.conn.textContent = s==="connected"?"已连接服务器":(s==="connecting"?"连接中…":"离线");
+    ui.homeStatus.textContent = s==="connected"?"已连接，可以创建/加入房间":(s==="connecting"?"正在连接服务器…":"服务器未连接");
+  },
+  onError(msg){ showErr(room?"lobby":"home", msg); },
+  onMessage(msg){
+    if(msg.type==="hello"){ me.id=msg.playerId; return; }
+    if(msg.type==="error"){ showErr(room?"lobby":"home", msg.message); return; }
+    if(msg.type==="room"){
+      room=msg;
+      renderLobby();
+      if(msg.state) applyState(msg.state);
+      if(msg.state && msg.state.started) setScreen("stage");
+      else setScreen("lobby");
+      return;
+    }
+    if(msg.type==="state"){
+      applyState(msg.state);
+      if(msg.state && msg.state.started) setScreen("stage");
+      if(msg.state && msg.state.over) showResult(msg.state);
+      return;
+    }
+    if(msg.type==="left"){
+      room=null; state=null; setScreen("home");
+    }
+  }
+});
+
+function renderLobby(){
+  if(!room) return;
+  ui.roomCode.textContent=room.roomCode||"------";
+  ui.inviteLink.textContent=inviteUrl(room.inviteToken);
+  ui.playerList.innerHTML="";
+  (room.players||[]).forEach((p,i)=>{
+    const el=document.createElement("div");
+    el.className="player";
+    const role=p.id===room.hostId?"房主":("玩家"+(i+1));
+    el.innerHTML=`<div><div>${p.name||p.id}${p.id===me.id?"（我）":""}</div><div class="tag">${role} · ${p.connected?"在线":"离线"}</div></div><div class="tag">${p.ready?"已准备":"未准备"}</div>`;
+    ui.playerList.appendChild(el);
+  });
+  const meP=(room.players||[]).find(p=>p.id===me.id);
+  ui.btnReady.textContent=meP&&meP.ready?"取消准备":"准备";
+  const allReady=(room.players||[]).length===3 && (room.players||[]).every(p=>p.ready);
+  ui.btnStart.disabled=!(room.hostId===me.id && allReady);
+  ui.lobbyStatus.textContent=`${(room.players||[]).length}/3 人 · ${allReady?"可以开始":"等待准备"}`;
+}
+
+function applyState(s){
+  if(!s) return;
+  state=s;
+  lastRevision=s.revision;
+  localTray=s.tray||[];
+  // slots
+  for(let i=0;i<SLOTS.length;i++){
+    const t=s.slots&&s.slots[i];
+    SLOTS[i].troop=t?{...t,type:{name:t.name,icon:t.icon,tag:t.tag,desc:t.desc},mode:t.mode,range:t.range||110}:null;
+  }
+  renderTray();
+  updateHUD();
+}
+
+function updateHUD(){
+  if(!state) return;
+  ui.level.textContent=state.level;
+  ui.wave.textContent=`${state.killed||0}/${WAVE_SIZE}`;
+  ui.crystals.textContent=state.crystals;
+  ui.phase.textContent=state.phase==="prep"?"备战":(state.phase==="battle"?"进攻":state.phase);
+  if(state.phase==="prep"){
+    const sec=Math.max(0,Math.ceil(state.prepTimer||0));
+    ui.timer.textContent=String((sec/60|0)).padStart(2,"0")+":"+String(sec%60).padStart(2,"0");
+  } else ui.timer.textContent="—";
+  ui.playersBar.innerHTML="";
+  (state.players||[]).forEach(p=>{
+    const chip=document.createElement("div");
+    chip.className="chip";
+    chip.textContent=`${p.name}${p.id===me.id?"(我)":""}${p.connected?"":" 离线"}`;
+    ui.playersBar.appendChild(chip);
+  });
+}
+
+function renderTray(){
+  trayEl.innerHTML="";
+  localTray.forEach(tr=>{
+    const el=document.createElement("div");
+    el.className="trayTroop";
+    el.dataset.id=tr.id;
+    const border=LEVEL_COLORS[(tr.level||1)-1]||"#fff";
+    el.style.borderColor=border;
+    el.innerHTML=`<div style="font-size:26px;pointer-events:none">${tr.icon||"🤖"}</div><div style="font-size:11px;pointer-events:none">${tr.name||""}</div><div style="font-size:9px;color:#8b93a7;pointer-events:none">${tr.desc||tr.tag||""}</div>`;
+    trayEl.appendChild(el);
+  });
+}
+
+function showResult(s){
+  ui.msg.style.display="flex";
+  if(s.result==="win"){ ui.msgTitle.textContent="通关！"; ui.msgText.textContent=`三人合力守住 40 关，剩余水晶 ${s.crystals}`; }
+  else { ui.msgTitle.textContent="失败"; ui.msgText.textContent=`水晶耗尽，坚持到第 ${s.level} 关`; }
+}
+
+function clientToCanvas(clientX,clientY){
+  const r=canvas.getBoundingClientRect();
+  if(r.width<=0||r.height<=0) return {x:0,y:0};
+  return {x:(clientX-r.left)*(CV_W/r.width), y:(clientY-r.top)*(CV_H/r.height)};
+}
+function slotAt(x,y){
+  for(let i=0;i<SLOTS.length;i++){
+    const s=SLOTS[i];
+    if(Math.abs(x-s.x)<40 && Math.abs(y-s.y)<40) return {slot:s,index:i};
+  }
+  return null;
+}
+
+function draw(){
+  ctx.clearRect(0,0,CV_W,CV_H);
+  ctx.fillStyle="#1c2030"; ctx.fillRect(0,0,CV_W,CV_H);
+  ctx.lineWidth=48; ctx.lineJoin="round"; ctx.lineCap="round";
+  ctx.strokeStyle="#2a3040";
+  ctx.beginPath(); ctx.moveTo(PATH[0].x,PATH[0].y);
+  for(let i=1;i<PATH.length;i++) ctx.lineTo(PATH[i].x,PATH[i].y);
+  ctx.stroke();
+  ctx.lineWidth=36; ctx.strokeStyle="#333b4f"; ctx.stroke();
+  // cave
+  ctx.beginPath(); ctx.ellipse(PATH[0].x,PATH[0].y,28,34,0,0,Math.PI*2);
+  ctx.fillStyle="#0d0f16"; ctx.fill();
+  // slots
+  for(const s of SLOTS){
+    if(!s.troop){
+      ctx.strokeStyle="rgba(120,130,160,.22)"; ctx.lineWidth=2; ctx.setLineDash([5,5]);
+      ctx.strokeRect(s.x-26,s.y-26,52,52); ctx.setLineDash([]);
+    }
+  }
+  // crystals
+  const end=PATH[PATH.length-1];
+  const crystals=state?state.crystals:START_CRYSTALS;
+  for(let i=0;i<START_CRYSTALS;i++){
+    const cx=end.x-90+(i%5)*40, cy=end.y-14+((i/5)|0)*30, alive=i<crystals;
+    ctx.beginPath(); ctx.moveTo(cx,cy-10); ctx.lineTo(cx+8,cy); ctx.lineTo(cx,cy+10); ctx.lineTo(cx-8,cy); ctx.closePath();
+    ctx.fillStyle=alive?"#4fd1ff":"#2b3140"; ctx.fill();
+  }
+  // poison clouds
+  for(const c of (state&&state.clouds)||[]){
+    const a=Math.min(0.35, (c.life||1)*0.12);
+    ctx.beginPath(); ctx.arc(c.x,c.y,c.r,0,Math.PI*2);
+    ctx.fillStyle=`rgba(132,204,22,${a})`; ctx.fill();
+    ctx.strokeStyle=`rgba(163,230,53,${a+0.2})`; ctx.lineWidth=1.5; ctx.stroke();
+  }
+  // effects
+  for(const ef of (state&&state.effects)||[]){
+    const a=Math.max(0.1, (ef.life||0.1)/(ef.max||0.2));
+    if(ef.kind==="ring"){
+      ctx.beginPath(); ctx.arc(ef.x,ef.y,(ef.r||40)*(1.05-a*0.2),0,Math.PI*2);
+      ctx.strokeStyle=ef.color||"#fb923c"; ctx.globalAlpha=a*0.8; ctx.lineWidth=2; ctx.stroke(); ctx.globalAlpha=1;
+    } else if(ef.kind==="laser"){
+      ctx.beginPath(); ctx.moveTo(ef.x1,ef.y1); ctx.lineTo(ef.x2,ef.y2);
+      ctx.strokeStyle=ef.color||"#f43f5e"; ctx.globalAlpha=a; ctx.lineWidth=ef.width||2; ctx.stroke(); ctx.globalAlpha=1;
+    } else if(ef.kind==="cone"){
+      ctx.beginPath(); ctx.moveTo(ef.x,ef.y);
+      ctx.arc(ef.x,ef.y,ef.r||60,ef.ang-ef.half,ef.ang+ef.half); ctx.closePath();
+      ctx.fillStyle=`rgba(251,146,60,${a*0.35})`; ctx.fill();
+    }
+  }
+  // beams
+  for(const b of (state&&state.beams)||[]){
+    const a=Math.min(1,(b.life||0.2)*3);
+    ctx.beginPath(); ctx.moveTo(b.x,b.y); ctx.lineTo(b.tx,b.ty);
+    ctx.strokeStyle=`rgba(79,209,255,${a*0.9})`; ctx.lineWidth=3; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(b.x,b.y); ctx.lineTo(b.tx,b.ty);
+    ctx.strokeStyle=`rgba(255,255,255,${a*0.5})`; ctx.lineWidth=1; ctx.stroke();
+  }
+  // troops
+  for(const s of SLOTS){
+    const tr=s.troop; if(!tr) continue;
+    ctx.beginPath(); ctx.arc(s.x,s.y,tr.range||100,0,Math.PI*2);
+    ctx.fillStyle = tr.mode==="aoe" ? "rgba(251,146,60,.05)" : "rgba(79,209,255,.04)";
+    ctx.fill();
+    ctx.beginPath(); ctx.arc(s.x,s.y,20,0,Math.PI*2);
+    ctx.fillStyle="#2c3244"; ctx.fill();
+    ctx.strokeStyle=LEVEL_COLORS[(tr.level||1)-1]; ctx.lineWidth=3; ctx.stroke();
+    ctx.font="26px serif"; ctx.textAlign="center"; ctx.textBaseline="middle";
+    ctx.fillText(tr.icon||tr.type?.icon||"🤖", s.x, s.y-2);
+    ctx.font="bold 11px \"Microsoft YaHei\",sans-serif"; ctx.fillStyle="#e8ebf0";
+    ctx.fillText(tr.name||tr.type?.name||"", s.x, s.y+32);
+    if(tr.ownerId===me.id){
+      ctx.font="9px sans-serif"; ctx.fillStyle="#7ee787"; ctx.fillText("我的", s.x, s.y+44);
+    } else {
+      ctx.font="9px sans-serif"; ctx.fillStyle="#8b93a7"; ctx.fillText("队友", s.x, s.y+44);
+    }
+  }
+  // enemies
+  const enemies=state?state.enemies:[];
+  for(const e of enemies){
+    ctx.beginPath(); ctx.arc(e.x,e.y,15,0,Math.PI*2);
+    ctx.fillStyle=e.color||"#f43f5e"; ctx.fill();
+    ctx.strokeStyle="#12151c"; ctx.lineWidth=2; ctx.stroke();
+    if(e.slow){
+      ctx.beginPath(); ctx.arc(e.x,e.y,18,0,Math.PI*2);
+      ctx.strokeStyle="rgba(125,211,252,.8)"; ctx.lineWidth=2; ctx.stroke();
+    }
+    if(e.poison){
+      ctx.beginPath(); ctx.arc(e.x,e.y,19,0,Math.PI*2);
+      ctx.strokeStyle="rgba(132,204,22,.7)"; ctx.lineWidth=2; ctx.stroke();
+    }
+    const w=30,h=4,p=Math.max(0,e.hp/e.hpMax);
+    ctx.fillStyle="#111"; ctx.fillRect(e.x-w/2,e.y-24,w,h);
+    ctx.fillStyle=p>0.5?"#7ee787":p>0.25?"#fbbf24":"#f43f5e";
+    ctx.fillRect(e.x-w/2,e.y-24,w*p,h);
+  }
+  // bullets
+  for(const b of (state&&state.bullets)||[]){
+    ctx.globalAlpha=0.85;
+    ctx.beginPath(); ctx.moveTo(b.sx,b.sy); ctx.lineTo(b.x,b.y);
+    ctx.strokeStyle=b.color||"#ffe58a"; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.beginPath(); ctx.arc(b.x,b.y,b.size||3,0,Math.PI*2);
+    ctx.fillStyle=b.color||"#ffe58a"; ctx.fill();
+  }
+  ctx.globalAlpha=1;
+  // drag ghost on canvas
+  if(drag.active && drag.troop){
+    const tr=drag.troop;
+    ctx.beginPath(); ctx.arc(drag.mx,drag.my,20,0,Math.PI*2);
+    ctx.fillStyle="#2c3244"; ctx.globalAlpha=.9; ctx.fill();
+    ctx.strokeStyle=LEVEL_COLORS[(tr.level||1)-1]; ctx.lineWidth=3; ctx.stroke();
+    ctx.globalAlpha=1;
+    ctx.font="26px serif"; ctx.textAlign="center"; ctx.textBaseline="middle";
+    ctx.fillText(tr.icon||"🤖", drag.mx, drag.my-2);
+    const hit=slotAt(drag.mx,drag.my);
+    if(hit){
+      const canMerge=hit.slot.troop && hit.slot.troop.ownerId===me.id && hit.slot.troop.level===tr.level && tr.level<MAX_LEVEL;
+      ctx.strokeStyle=canMerge?"#7ee787":(hit.slot.troop?"#f43f5e":"#4fd1ff");
+      ctx.lineWidth=3; ctx.strokeRect(hit.slot.x-28,hit.slot.y-28,56,56);
+      if(canMerge){
+        ctx.font="12px sans-serif"; ctx.fillStyle="#7ee787";
+        ctx.fillText("合成→随机造型", hit.slot.x, hit.slot.y-40);
+      }
+    }
+  }
+}
+
+function loop(){ draw(); requestAnimationFrame(loop); }
+
+// drag handlers — local preview only, command on drop
+trayEl.addEventListener("pointerdown", e=>{
+  const el=e.target.closest(".trayTroop"); if(!el) return;
+  const tr=localTray.find(t=>t.id===el.dataset.id); if(!tr) return;
+  e.preventDefault(); el.setPointerCapture?.(e.pointerId);
+  drag.active=true; drag.troop=tr; drag.from={type:"tray"}; drag.pointerId=e.pointerId;
+  const p=clientToCanvas(e.clientX,e.clientY); drag.mx=p.x; drag.my=p.y;
+  ghostEl.style.display="flex"; ghostEl.innerHTML=`<div style="font-size:26px">${tr.icon||"🤖"}</div><div style="font-size:11px">${tr.name||""}</div>`;
+  ghostEl.style.left=e.clientX+"px"; ghostEl.style.top=e.clientY+"px";
+});
+canvas.addEventListener("pointerdown", e=>{
+  if(drag.active) return;
+  const p=clientToCanvas(e.clientX,e.clientY);
+  const hit=slotAt(p.x,p.y);
+  if(hit && hit.slot.troop && hit.slot.troop.ownerId===me.id){
+    e.preventDefault(); canvas.setPointerCapture?.(e.pointerId);
+    drag.active=true; drag.troop=hit.slot.troop; drag.from={type:"slot",index:hit.index}; drag.pointerId=e.pointerId;
+    drag.mx=p.x; drag.my=p.y;
+    ghostEl.style.display="flex"; ghostEl.innerHTML=`<div style="font-size:26px">${hit.slot.troop.icon||"🤖"}</div>`;
+    ghostEl.style.left=e.clientX+"px"; ghostEl.style.top=e.clientY+"px";
+  }
+});
+window.addEventListener("pointermove", e=>{
+  if(!drag.active) return;
+  if(drag.pointerId!=null && e.pointerId!==drag.pointerId) return;
+  const p=clientToCanvas(e.clientX,e.clientY); drag.mx=p.x; drag.my=p.y;
+  ghostEl.style.left=e.clientX+"px"; ghostEl.style.top=e.clientY+"px";
+});
+window.addEventListener("pointerup", e=>{
+  if(!drag.active) return;
+  if(drag.pointerId!=null && e.pointerId!==drag.pointerId) return;
+  const p=clientToCanvas(e.clientX,e.clientY);
+  const hit=slotAt(p.x,p.y);
+  if(hit && drag.troop){
+    const type=drag.from?.type==="slot"?"move":"deploy";
+    net.send(type,{troopId:drag.troop.id,targetSlot:hit.index,sourceSlot:drag.from?.type==="slot"?drag.from.index:null});
+  }
+  drag.active=false; drag.troop=null; drag.from=null; drag.pointerId=null; ghostEl.style.display="none";
+});
+window.addEventListener("pointercancel", ()=>{
+  drag.active=false; drag.troop=null; drag.from=null; drag.pointerId=null; ghostEl.style.display="none";
+});
+
+// buttons
+document.getElementById("btnCreate").onclick=()=>{
+  showErr("home","");
+  me.name=document.getElementById("nameInput").value.trim()||me.name;
+  net.send("create",{name:me.name});
+};
+document.getElementById("btnJoin").onclick=()=>{
+  showErr("home","");
+  me.name=document.getElementById("nameInput").value.trim()||me.name;
+  const code=document.getElementById("codeInput").value.trim();
+  if(!code){ showErr("home","请输入房间码"); return; }
+  net.send("join",{code,name:me.name});
+};
+document.getElementById("btnSolo").onclick=()=>{ location.href="/"; };
+document.getElementById("btnReady").onclick=()=>{
+  const meP=(room?.players||[]).find(p=>p.id===me.id);
+  net.send("ready",{value:!(meP&&meP.ready)});
+};
+document.getElementById("btnStart").onclick=()=>net.send("start",{});
+document.getElementById("btnLeave").onclick=()=>net.send("leave",{});
+document.getElementById("btnCopyCode").onclick=async()=>{
+  await copyText(room?.roomCode||"");
+  ui.lobbyStatus.textContent="房间码已复制";
+};
+document.getElementById("btnCopyLink").onclick=async()=>{
+  await copyText(inviteUrl(room?.inviteToken||""));
+  ui.lobbyStatus.textContent="邀请链接已复制";
+};
+document.getElementById("msgRematch").onclick=()=>{
+  ui.msg.style.display="none";
+  net.send("rematch",{});
+  setScreen("lobby");
+};
+document.getElementById("msgHome").onclick=()=>{
+  ui.msg.style.display="none";
+  net.send("leave",{});
+  setScreen("home");
+};
+
+// auto join from invite link
+const params=new URLSearchParams(location.search);
+const roomToken=params.get("room");
+if(roomToken) document.getElementById("codeInput").value=roomToken;
+
+net.connect();
+// auto-join token after short wait for hello
+if(roomToken){
+  setTimeout(()=>{
+    if(!room) net.send("join",{token:roomToken,name:document.getElementById("nameInput").value.trim()});
+  },400);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

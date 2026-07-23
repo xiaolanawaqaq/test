@@ -1,0 +1,15 @@
+{
+  "name": "merge-td-multiplayer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Three-player online co-op server for Merge TD",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "check": "node --check server/index.js && node --check server/room-manager.js && node --check server/game-session.js && node --check server/transport.js && node --check shared/game-engine.js && node --check client/network-client.js && node --check server/smoke-test.js",
+    "smoke": "node server/smoke-test.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
