@@ -79,6 +79,7 @@
       <button id="btnCopyLink" class="secondary">复制邀请链接</button>
     </div>
     <div class="players" id="playerList"></div>
+    <p class="muted" id="startHint" style="margin-top:10px">流程：所有人点「准备」→ 房主点「开始游戏」（1～3 人都能开）</p>
     <div class="row">
       <button id="btnReady">准备</button>
       <button id="btnStart" disabled>开始游戏</button>
@@ -98,6 +99,7 @@
       <div class="stat"><span class="lbl">阶段</span><span class="val" id="uiPhase">备战</span></div>
       <div class="stat"><span class="lbl">倒计时</span><span class="val" id="uiTimer">--</span></div>
       <div id="playersBar"></div>
+      <button id="btnWave" disabled style="margin-left:auto">开始进攻</button>
     </div>
     <div id="canvasBox"><canvas id="gameCanvas" width="960" height="576"></canvas></div>
     <div id="tray">
@@ -146,6 +148,7 @@ const ui={
   phase:document.getElementById("uiPhase"),
   timer:document.getElementById("uiTimer"),
   playersBar:document.getElementById("playersBar"),
+  btnWave:document.getElementById("btnWave"),
   msg:document.getElementById("msg"),
   msgTitle:document.getElementById("msgTitle"),
   msgText:document.getElementById("msgText"),
@@ -223,9 +226,23 @@ function renderLobby(){
   });
   const meP=(room.players||[]).find(p=>p.id===me.id);
   ui.btnReady.textContent=meP&&meP.ready?"取消准备":"准备";
-  const allReady=(room.players||[]).length===3 && (room.players||[]).every(p=>p.ready);
-  ui.btnStart.disabled=!(room.hostId===me.id && allReady);
-  ui.lobbyStatus.textContent=`${(room.players||[]).length}/3 人 · ${allReady?"可以开始":"等待准备"}`;
+  const players=room.players||[];
+  const allReady=players.length>=1 && players.every(p=>p.ready);
+  const isHost=room.hostId===me.id;
+  // 房主在全员准备后可点；非房主始终灰掉但文案说明原因
+  ui.btnStart.disabled=!(isHost && allReady);
+  ui.btnStart.textContent = isHost ? "开始游戏" : "等待房主开始";
+  let tip=`${players.length}/3 人`;
+  if(!allReady) tip += " · 请所有人先点准备";
+  else if(!isHost) tip += " · 已齐，等房主点开始";
+  else tip += " · 可以开始了，点右侧「开始游戏」";
+  ui.lobbyStatus.textContent=tip;
+  const hint=document.getElementById("startHint");
+  if(hint){
+    if(!isHost) hint.textContent="你不是房主：准备后等房主点「开始游戏」";
+    else if(!allReady) hint.textContent="你是房主：等所有人准备后，「开始游戏」会变亮";
+    else hint.textContent="全员已准备 → 点「开始游戏」进入战场";
+  }
 }
 
 function applyState(s){
@@ -259,6 +276,23 @@ function updateHUD(){
     chip.textContent=`${p.name}${p.id===me.id?"(我)":""}${p.connected?"":" 离线"}`;
     ui.playersBar.appendChild(chip);
   });
+  // 备战阶段：房主可提前开始进攻；进攻中禁用
+  const isHost = !!(room && room.hostId===me.id) || !!(state && state.hostId===me.id);
+  if(ui.btnWave){
+    if(state.over){
+      ui.btnWave.disabled=true;
+      ui.btnWave.textContent="已结束";
+    } else if(state.phase==="prep"){
+      ui.btnWave.disabled=!isHost;
+      ui.btnWave.textContent=isHost?"开始进攻":"等待房主进攻";
+    } else if(state.phase==="battle"){
+      ui.btnWave.disabled=true;
+      ui.btnWave.textContent="进攻中";
+    } else {
+      ui.btnWave.disabled=true;
+      ui.btnWave.textContent="开始进攻";
+    }
+  }
 }
 
 function renderTray(){
@@ -483,6 +517,10 @@ document.getElementById("btnReady").onclick=()=>{
   net.send("ready",{value:!(meP&&meP.ready)});
 };
 document.getElementById("btnStart").onclick=()=>net.send("start",{});
+document.getElementById("btnWave").onclick=()=>{
+  if(!state || state.phase!=="prep") return;
+  net.send("startWave",{});
+};
 document.getElementById("btnLeave").onclick=()=>net.send("leave",{});
 document.getElementById("btnCopyCode").onclick=async()=>{
   await copyText(room?.roomCode||"");

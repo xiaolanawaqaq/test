@@ -158,7 +158,9 @@ function publicState(state, viewerId){
 
 function player(state,id){ return state.players.find(p=>p.id===id); }
 function allReady(state){
-  return state.players.length===3 && state.players.every(p=>p.ready && p.connected);
+  // 至少 1 人，当前在线玩家全部准备即可开局（方便 1～3 人测试）
+  const online = state.players.filter(p=>p.connected);
+  return online.length>=1 && online.every(p=>p.ready);
 }
 
 function findOwnedTroop(state,ownerId,id){
@@ -180,14 +182,26 @@ function command(state, playerId, message){
   }
   if(message.type==="start"){
     if(state.hostId!==playerId) throw new Error("只有房主可以开始");
-    if(state.players.length!==3) throw new Error("需要三名玩家");
-    if(!allReady(state)) throw new Error("需要三人都准备");
+    if(state.players.length<1) throw new Error("房间里没有玩家");
+    if(!allReady(state)) throw new Error("需要所有在线玩家都准备");
     if(state.started) throw new Error("已经开始");
     state.started=true;
     state.phase="prep";
     state.prepTimer=PREP_SECONDS;
     state.revision++;
     return {ok:true,start:true};
+  }
+  if(message.type==="startWave"){
+    // 备战阶段房主可跳过倒计时，立即进入进攻
+    if(state.hostId!==playerId) throw new Error("只有房主可以开始进攻");
+    if(!state.started || state.over) throw new Error("游戏未开始");
+    if(state.phase!=="prep") throw new Error("当前不是备战阶段");
+    state.phase="battle";
+    state.prepTimer=0;
+    state.spawned=0; state.killed=0; state.spawnAcc=0;
+    state.enemies=[]; state.bullets=[]; state.beams=[]; state.clouds=[]; state.effects=[];
+    state.revision++;
+    return {ok:true,startWave:true};
   }
   if(message.type==="deploy" || message.type==="move" || message.type==="merge"){
     if(!state.started || state.over) throw new Error("游戏未开始");

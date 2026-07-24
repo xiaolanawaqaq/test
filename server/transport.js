@@ -99,7 +99,7 @@ function attachTransport(server){
           updateRoom(room); sendState(room); return;
         }
         if(msg.type==="start"){
-          if(room.players.size!==3) throw new Error("需要三名玩家");
+          if(room.players.size<1) throw new Error("房间里没有玩家");
           if(room.hostId!==player.id) throw new Error("只有房主可以开始");
           const state=ensureSession(room);
           // sync ready flags
@@ -109,6 +109,12 @@ function attachTransport(server){
           }
           command(state,player.id,{type:"start"});
           sendState(room); updateRoom(room); return;
+        }
+        if(msg.type==="startWave"){
+          if(room.hostId!==player.id) throw new Error("只有房主可以开始进攻");
+          const state=ensureSession(room);
+          command(state,player.id,{type:"startWave"});
+          sendState(room); return;
         }
         if(msg.type==="deploy"||msg.type==="move"||msg.type==="merge"){
           const state=ensureSession(room);
