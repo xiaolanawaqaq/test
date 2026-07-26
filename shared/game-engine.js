@@ -54,24 +54,39 @@ function makeTroop(level, ownerId, nextId, rng, typeKey){
   };
 }
 
+const BUG_KINDS = ["mite","beetle","spider","flyer"];
+const BUG_PAL = {
+  mite:   {body:"#7a3f6a", shell:"#5a2850", eye:"#c4f042"},
+  beetle: {body:"#a86a3a", shell:"#6e4020", eye:"#ffd36b"},
+  spider: {body:"#c9a227", shell:"#8b1e1e", eye:"#4fd1ff"},
+  flyer:  {body:"#6b4ea3", shell:"#3d2a6e", eye:"#7ee787"},
+};
 function makeEnemy(level, nextId, rng){
-  // 每关血量/防御/速度都涨；第 2 关起就要认真合成
-  const hp = Math.round(32 * Math.pow(1.28, level-1) + (level>1 ? level*8 : 0));
-  const def = Math.floor((level-1) * 2.2 + (level>=5 ? (level-4)*1.5 : 0));
-  const speed = 40 + (level-1)*2.1 + (level>=10 ? (level-9)*0.6 : 0);
-  const hue = (level*41 + rng()*40) % 360;
-  const bodyR = 10 + Math.min(5, (level-1)*0.18);
+  // 第1关可过；第2关不合兵吃紧；七八关只靠1级兵应打不过
+  const hp = Math.round(50 * Math.pow(1.52, level-1) + level*level*16);
+  const def = Math.floor((level-1)*3.2 + (level>=3 ? (level-2)*2.4 : 0));
+  const speed = 44 + (level-1)*3.0 + (level>=6 ? (level-5)*1.8 : 0);
+  const kind = BUG_KINDS[(rng()*BUG_KINDS.length)|0];
+  const pal = BUG_PAL[kind];
+  const bodyR = 9 + Math.min(5, (level-1)*0.2) + (kind==="spider"?1:0);
   const p0 = PATH[0];
   return {
     id: nextId(),
-    hpMax: hp, hp, def, speed, bodyR,
+    hpMax: hp, hp, def, speed, bodyR, kind,
     dist: 0,
     x: p0.x, y: p0.y,
     slowMul: 1, slowTimer: 0,
     poisonTimer: 0, poisonDps: 0,
-    color: `hsl(${hue},65%,58%)`,
+    walk: rng()*Math.PI*2,
+    color: pal.body, shell: pal.shell, eye: pal.eye,
     dead: false, reached: false,
   };
+}
+function waveSizeFor(level){
+  return WAVE_SIZE + Math.floor((level-1)/2) + (level>=6 ? level-5 : 0);
+}
+function spawnIntervalFor(level){
+  return Math.max(0.38, 0.72 - (level-1)*0.035);
 }
 
 function createSession(playerIds, seed=Date.now()>>>0){
@@ -133,13 +148,15 @@ function publicState(state, viewerId){
     crystals: state.crystals,
     spawned: state.spawned,
     killed: state.killed,
+    waveSize: waveSizeFor(state.level),
     hostId: state.hostId,
     players: state.players.map(p=>({id:p.id, name:p.name, ready:!!p.ready, connected:!!p.connected})),
     slots: state.slots.map(t=>t?serializeTroop(t):null),
     tray: (state.trays[viewerId]||[]).map(serializeTroop),
     enemies: state.enemies.filter(e=>!e.dead).map(e=>({
       id:e.id, hp:Math.max(0,e.hp), hpMax:e.hpMax,
-      x:e.x, y:e.y, color:e.color, bodyR:e.bodyR||12,
+      x:e.x, y:e.y, color:e.color, shell:e.shell, eye:e.eye,
+      bodyR:e.bodyR||12, kind:e.kind||"mite", walk:e.walk||0,
       slow:e.slowMul<1, poison:e.poisonTimer>0,
     })),
     bullets: state.bullets.map(b=>({
@@ -237,7 +254,9 @@ function command(state, playerId, message){
 
 function damageEnemy(state, e, dmg, mul){
   if(!e || e.dead) return;
-  const real = Math.max(1, dmg*(mul||1) - e.def*0.5);
+  // 防御按比例减伤，避免低级怪被 1 伤碾压、高等级怪仍几乎无感
+  const factor = 1 / (1 + Math.max(0, e.def) * 0.085);
+  const real = Math.max(0.35, (dmg||0) * (mul||1) * factor);
   e.hp -= real;
   if(e.hp<=0){ e.dead=true; state.killed++; }
 }
@@ -473,9 +492,10 @@ function step(state, dt){
   }
 
   // spawn from cave
-  if(state.spawned < WAVE_SIZE){
+  const need = waveSizeFor(state.level);
+  if(state.spawned < need){
     state.spawnAcc += dt;
-    if(state.spawnAcc >= 0.75){
+    if(state.spawnAcc >= spawnIntervalFor(state.level)){
       state.spawnAcc = 0;
       state.enemies.push(makeEnemy(state.level, state.nextId, state.rng));
       state.spawned++;
@@ -493,6 +513,7 @@ function step(state, dt){
       if(e.poisonTimer<=0) e.poisonDps=0;
     }
     e.dist += e.speed * e.slowMul * dt;
+    e.walk = (e.walk||0) + dt * 10 * e.slowMul;
     const pos = posOnPath(e.dist);
     e.x=pos.x; e.y=pos.y;
     if(e.dist >= PATH_LEN){
@@ -560,8 +581,13 @@ function step(state, dt){
   state.bullets = state.bullets.filter(b=>b.life>0);
   state.effects = state.effects.filter(ef=>{ ef.life-=dt; return ef.life>0; });
   state.enemies = state.enemies.filter(e=>!e.dead);
+  // 硬上限，防止实体爆炸把客户端拖死/黑屏
+  if(state.bullets.length>220) state.bullets=state.bullets.slice(-120);
+  if(state.effects.length>160) state.effects=state.effects.slice(-80);
+  if(state.clouds.length>40) state.clouds=state.clouds.slice(-20);
+  if(state.beams.length>40) state.beams=state.beams.slice(-20);
 
-  if(state.spawned>=WAVE_SIZE && state.enemies.length===0){
+  if(state.spawned>=waveSizeFor(state.level) && state.enemies.length===0){
     if(state.level >= TOTAL_LEVELS){
       state.over=true; state.result="win";
     } else {

@@ -307,22 +307,38 @@ function makeTroop(level){
   };
 }
 
+// 虫子造型（从洞口爬出）：mite 螨虫 / beetle 甲虫 / spider 机械蛛 / flyer 飞虫
+const BUG_KINDS = ["mite","beetle","spider","flyer"];
 function makeEnemy(level){
-  // 每关血量/防御/速度都涨；第 2 关起就要认真合成，合错容易翻车
-  const hp = Math.round(32 * Math.pow(1.28, level-1) + (level>1 ? level*8 : 0));
-  const def = Math.floor((level-1) * 2.2 + (level>=5 ? (level-4)*1.5 : 0));
-  const speed = 40 + (level-1)*2.1 + (level>=10 ? (level-9)*0.6 : 0);
-  const hue = (level*41 + Math.random()*40) % 360;
-  const bodyR = 10 + Math.min(5, (level-1)*0.18);
+  // 第1关可过；第2关不合兵会吃紧；七八关只靠1级兵应打不过
+  const hp = Math.round(50 * Math.pow(1.52, level-1) + level*level*16);
+  const def = Math.floor((level-1)*3.2 + (level>=3 ? (level-2)*2.4 : 0));
+  const speed = 44 + (level-1)*3.0 + (level>=6 ? (level-5)*1.8 : 0);
+  const kind = BUG_KINDS[(Math.random()*BUG_KINDS.length)|0];
+  // 按关卡偏向不同虫子色
+  const palettes = {
+    mite:   {body:"#7a3f6a", shell:"#5a2850", eye:"#c4f042"},
+    beetle: {body:"#a86a3a", shell:"#6e4020", eye:"#ffd36b"},
+    spider: {body:"#c9a227", shell:"#8b1e1e", eye:"#4fd1ff"},
+    flyer:  {body:"#6b4ea3", shell:"#3d2a6e", eye:"#7ee787"},
+  };
+  const pal = palettes[kind];
+  const bodyR = 9 + Math.min(5, (level-1)*0.2) + (kind==="spider"?1:0);
   return {
-    id:newId(), hpMax:hp, hp, def, speed, bodyR,
+    id:newId(), hpMax:hp, hp, def, speed, bodyR, kind,
     slowTimer:0, slowMul:1,
     poisonTimer:0, poisonDps:0,
-    seg:0, t:0,
+    seg:0, t:0, walk:Math.random()*Math.PI*2,
     x:PATH[0].x, y:PATH[0].y,
-    color:`hsl(${hue},65%,58%)`,
+    color:pal.body, shell:pal.shell, eye:pal.eye,
     dead:false, reached:false,
   };
+}
+function waveSizeFor(level){
+  return WAVE_SIZE + Math.floor((level-1)/2) + (level>=6 ? level-5 : 0);
+}
+function spawnIntervalFor(level){
+  return Math.max(0.38, 0.72 - (level-1)*0.035);
 }
 
 // ============ 待命区 ============
@@ -401,9 +417,10 @@ function update(dt){
     return;
   }
 
-  if(game.spawned<WAVE_SIZE){
+  const need = waveSizeFor(game.level);
+  if(game.spawned<need){
     game.spawnAcc+=dt;
-    if(game.spawnAcc>=0.75){
+    if(game.spawnAcc>=spawnIntervalFor(game.level)){
       game.spawnAcc=0;
       game.enemies.push(makeEnemy(game.level));
       game.spawned++;
@@ -421,6 +438,7 @@ function update(dt){
       if(e.poisonTimer<=0) e.poisonDps=0;
     }
     let move=e.speed*e.slowMul*dt;
+    e.walk=(e.walk||0)+dt*10*e.slowMul;
     while(move>0 && e.seg<PATH.length-1){
       const a=PATH[e.seg], b=PATH[e.seg+1];
       const segLen=Math.hypot(b.x-a.x,b.y-a.y);
@@ -470,7 +488,7 @@ function update(dt){
       if(tgt){
         tr.cd=1/Math.max(0.12,tr.rate);
         fireByStyle(s,tr,tgt);
-        playSfx(tr.type.sound);
+        playSfx((tr.type && tr.type.sound) || "gun");
       }
     }
   }
@@ -494,7 +512,7 @@ function update(dt){
   game.effects=game.effects.filter(ef=>{ ef.life-=dt; return ef.life>0; });
   game.enemies=game.enemies.filter(e=>!e.dead);
 
-  if(game.spawned>=WAVE_SIZE && game.enemies.length===0) endWave();
+  if(game.spawned>=waveSizeFor(game.level) && game.enemies.length===0) endWave();
 }
 
 // ---- 按 style 开火 ----
@@ -645,7 +663,9 @@ function pushBullet(slot, tgt, opts){
 
 function damageEnemy(e, dmg, mul){
   if(!e || e.dead) return;
-  const real=Math.max(1, dmg*mul - e.def*0.5);
+  // 防御按比例减伤，避免低级怪被 1 伤碾压、高等级怪仍几乎无感
+  const factor = 1 / (1 + Math.max(0, e.def) * 0.085);
+  const real = Math.max(0.35, (dmg||0) * (mul||1) * factor);
   e.hp-=real;
   if(e.hp<=0){ e.dead=true; game.killed++; }
 }
@@ -724,6 +744,8 @@ function loseCrystal(){
 
 // ============ 渲染 ============
 function draw(){
+  try{
+  ctx.setTransform(1,0,0,1,0,0);
   ctx.clearRect(0,0,CV_W,CV_H);
   ctx.fillStyle="#1c2030";
   ctx.fillRect(0,0,CV_W,CV_H);
@@ -875,6 +897,10 @@ function draw(){
       }
     }
   }
+  }catch(err){
+    console.error("draw error", err);
+    try{ ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle="#1c2030"; ctx.fillRect(0,0,CV_W,CV_H); }catch(_){}
+  }
 }
 
 function hexA(hex,a){
@@ -886,66 +912,206 @@ function hexA(hex,a){
   return hex;
 }
 
-// 小兵：更小底座 + 脚下椭圆阴影 + 顶部高光，做出一点立体感
+// 小兵：机甲 / 飞机造型（站格子里不移动）
 function drawTroopAt(x, y, tr, alpha){
   const a = alpha==null ? 1 : alpha;
-  const r = 14;
-  const icon = tr.type ? tr.type.icon : (tr.icon||"🤖");
   const name = tr.type ? tr.type.name : (tr.name||"");
   const mode = tr.mode || (tr.type && tr.type.mode) || "single";
+  const style = tr.style || (tr.type && tr.type.style) || "rapid";
   const lv = (tr.level||1)-1;
+  const ring = LEVEL_COLORS[lv]||"#fff";
   ctx.save();
   ctx.globalAlpha = a;
-  // 射程光圈（很淡）
   if(tr.range){
     ctx.beginPath(); ctx.arc(x,y,tr.range,0,Math.PI*2);
     ctx.fillStyle = mode==="aoe" ? "rgba(251,146,60,.045)" : "rgba(79,209,255,.035)";
     ctx.fill();
   }
   // 脚下阴影
-  ctx.beginPath(); ctx.ellipse(x, y+r-1, r*0.85, r*0.32, 0, 0, Math.PI*2);
-  ctx.fillStyle="rgba(0,0,0,.35)"; ctx.fill();
-  // 底座渐变（上亮下暗）
-  const g=ctx.createRadialGradient(x-3, y-5, 2, x, y, r);
-  g.addColorStop(0,"#3a4258");
-  g.addColorStop(0.55,"#2a3042");
-  g.addColorStop(1,"#1a1e2a");
-  ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
-  ctx.fillStyle=g; ctx.fill();
-  // 等级色环
-  ctx.strokeStyle=LEVEL_COLORS[lv]||"#fff";
-  ctx.lineWidth=2.5; ctx.stroke();
-  // 顶部高光弧
-  ctx.beginPath(); ctx.arc(x,y,r-1.5,-Math.PI*0.85,-Math.PI*0.15);
-  ctx.strokeStyle="rgba(255,255,255,.28)"; ctx.lineWidth=1.5; ctx.stroke();
-  // 图标略抬起
-  ctx.font="18px serif"; ctx.textAlign="center"; ctx.textBaseline="middle";
-  ctx.fillStyle="#e8ebf0";
-  ctx.fillText(icon, x, y-1);
-  // 名字
+  ctx.beginPath(); ctx.ellipse(x, y+12, 12, 4.5, 0, 0, Math.PI*2);
+  ctx.fillStyle="rgba(0,0,0,.4)"; ctx.fill();
+  // 等级底盘
+  ctx.beginPath(); ctx.arc(x, y+8, 11, 0, Math.PI*2);
+  ctx.fillStyle="rgba(20,24,36,.85)"; ctx.fill();
+  ctx.strokeStyle=ring; ctx.lineWidth=2; ctx.stroke();
+
+  const isPlane = style==="splash" || style==="missile" || (name&&name.indexOf("飞机")>=0) || (name&&name.indexOf("飞弹")>=0);
+  if(isPlane){
+    // 悬浮小飞机
+    const bob = Math.sin((performance.now()/220) + x*0.05) * 1.2;
+    const py = y - 4 + bob;
+    // 机身
+    const g=ctx.createLinearGradient(x-10,py,x+10,py);
+    g.addColorStop(0,"#6a8aa8"); g.addColorStop(0.5,"#cfe6f5"); g.addColorStop(1,"#4f6f88");
+    ctx.beginPath();
+    ctx.moveTo(x+12, py); ctx.lineTo(x+2, py-4); ctx.lineTo(x-10, py-2);
+    ctx.lineTo(x-12, py); ctx.lineTo(x-10, py+2); ctx.lineTo(x+2, py+4);
+    ctx.closePath(); ctx.fillStyle=g; ctx.fill();
+    ctx.strokeStyle="#1a2430"; ctx.lineWidth=1; ctx.stroke();
+    // 机翼
+    ctx.beginPath();
+    ctx.moveTo(x-1, py); ctx.lineTo(x-6, py-8); ctx.lineTo(x+4, py-2);
+    ctx.closePath(); ctx.fillStyle="#8eb4cc"; ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(x-1, py); ctx.lineTo(x-6, py+8); ctx.lineTo(x+4, py+2);
+    ctx.closePath(); ctx.fillStyle="#6f93ab"; ctx.fill();
+    // 尾焰
+    ctx.beginPath();
+    ctx.moveTo(x-12, py); ctx.lineTo(x-17, py-2); ctx.lineTo(x-17, py+2);
+    ctx.closePath(); ctx.fillStyle="rgba(96,165,250,.85)"; ctx.fill();
+    // 座舱
+    ctx.beginPath(); ctx.ellipse(x+4, py-1, 3, 2, 0, 0, Math.PI*2);
+    ctx.fillStyle="#4fd1ff"; ctx.fill();
+  } else {
+    // 机甲小兵：躯干 + 枪臂 + 腿
+    const g=ctx.createLinearGradient(x-8,y-10,x+8,y+8);
+    g.addColorStop(0,"#d7e6f2"); g.addColorStop(0.45,"#7ea0bb"); g.addColorStop(1,"#3d556b");
+    // 腿
+    ctx.strokeStyle="#5a748a"; ctx.lineWidth=2.2; ctx.lineCap="round";
+    ctx.beginPath(); ctx.moveTo(x-3,y+2); ctx.lineTo(x-6,y+10); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x+3,y+2); ctx.lineTo(x+6,y+10); ctx.stroke();
+    // 躯干
+    ctx.beginPath();
+    ctx.moveTo(x-7,y+2); ctx.lineTo(x-6,y-8); ctx.lineTo(x+6,y-8); ctx.lineTo(x+7,y+2);
+    ctx.closePath(); ctx.fillStyle=g; ctx.fill(); ctx.strokeStyle="#1f2a36"; ctx.lineWidth=1; ctx.stroke();
+    // 肩甲
+    ctx.beginPath(); ctx.ellipse(x-6,y-6,3.5,2.5,0,0,Math.PI*2);
+    ctx.fillStyle="#9ec0d8"; ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x+6,y-6,3.5,2.5,0,0,Math.PI*2);
+    ctx.fillStyle="#9ec0d8"; ctx.fill();
+    // 头
+    ctx.beginPath(); ctx.arc(x, y-11, 4.2, 0, Math.PI*2);
+    ctx.fillStyle="#b7d0e2"; ctx.fill(); ctx.strokeStyle="#2a3644"; ctx.stroke();
+    // 目镜
+    ctx.fillStyle=ring; ctx.fillRect(x-2.5, y-12, 5, 2);
+    // 枪
+    ctx.strokeStyle="#cfd8e3"; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(x+6,y-3); ctx.lineTo(x+14,y-5); ctx.stroke();
+    ctx.fillStyle="#4fd1ff"; ctx.beginPath(); ctx.arc(x+14,y-5,1.5,0,Math.PI*2); ctx.fill();
+    // 胸口灯
+    ctx.beginPath(); ctx.arc(x, y-2, 1.8, 0, Math.PI*2);
+    ctx.fillStyle=ring; ctx.fill();
+  }
   if(name){
     ctx.font='bold 10px "Microsoft YaHei",sans-serif';
+    ctx.textAlign="center"; ctx.textBaseline="middle";
     ctx.fillStyle="#e8ebf0";
-    ctx.fillText(name, x, y+r+12);
+    ctx.fillText(name, x, y+20);
   }
   ctx.restore();
 }
 
-// 妖怪：更小圆球 + 阴影 + 高光，沿路径走动
+// 妖怪：虫子造型（从洞口爬出，沿路径走动）
 function drawEnemyAt(e){
   const r = e.bodyR || 11;
   const x=e.x, y=e.y;
-  // 脚下阴影
-  ctx.beginPath(); ctx.ellipse(x, y+r*0.55, r*0.9, r*0.35, 0, 0, Math.PI*2);
+  const kind = e.kind || "mite";
+  const body = e.color || "#7a3f6a";
+  const shell = e.shell || shadeColor(body, -30);
+  const eye = e.eye || "#c4f042";
+  const wob = Math.sin((e.walk||0)) * 0.18;
+  ctx.save();
+  // 阴影
+  ctx.beginPath(); ctx.ellipse(x, y+r*0.55, r*0.95, r*0.32, 0, 0, Math.PI*2);
   ctx.fillStyle="rgba(0,0,0,.4)"; ctx.fill();
-  // 身体渐变
-  const g=ctx.createRadialGradient(x-r*0.3, y-r*0.45, r*0.15, x, y, r);
-  g.addColorStop(0,"#ffffffaa");
-  g.addColorStop(0.25, e.color||"#f43f5e");
-  g.addColorStop(1, shadeColor(e.color||"#f43f5e", -35));
-  ctx.beginPath(); ctx.arc(x, y-2, r, 0, Math.PI*2);
-  ctx.fillStyle=g; ctx.fill();
-  ctx.strokeStyle="#12151c"; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.translate(x, y-2);
+  ctx.rotate(wob);
+
+  if(kind==="flyer"){
+    // 飞虫：椭圆身体 + 翅
+    ctx.beginPath(); ctx.ellipse(0,0,r*0.95,r*0.65,0,0,Math.PI*2);
+    const g=ctx.createRadialGradient(-r*0.3,-r*0.3,1,0,0,r);
+    g.addColorStop(0, body); g.addColorStop(1, shell);
+    ctx.fillStyle=g; ctx.fill(); ctx.strokeStyle="#1a1020"; ctx.lineWidth=1; ctx.stroke();
+    // 翅
+    const flap=0.4+Math.sin((e.walk||0)*2)*0.25;
+    ctx.globalAlpha=0.55;
+    ctx.beginPath(); ctx.ellipse(-r*0.2,-r*0.7,r*0.7,r*0.35,-0.6,0,Math.PI*2);
+    ctx.fillStyle="#c4b5fd"; ctx.fill();
+    ctx.beginPath(); ctx.ellipse(r*0.2,-r*0.7,r*0.7,r*0.35,0.6,0,Math.PI*2);
+    ctx.fillStyle="#a78bfa"; ctx.fill();
+    ctx.globalAlpha=1;
+    // 绿眼
+    ctx.fillStyle=eye;
+    ctx.beginPath(); ctx.arc(-r*0.25,-r*0.1,1.6,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(r*0.25,-r*0.1,1.6,0,Math.PI*2); ctx.fill();
+    // 口器光
+    ctx.strokeStyle="rgba(134,239,172,.7)"; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.arc(0,r*0.35,r*0.35,0.2,Math.PI-0.2); ctx.stroke();
+  } else if(kind==="spider"){
+    // 机械蛛：金红身体 + 腿
+    const legPhase=e.walk||0;
+    ctx.strokeStyle=shell; ctx.lineWidth=1.6; ctx.lineCap="round";
+    for(let i=0;i<6;i++){
+      const side=i<3?-1:1;
+      const idx=i%3;
+      const ang = side*(0.5+idx*0.45) + Math.sin(legPhase+idx)*0.15;
+      const lx=Math.cos(ang)*r*1.55*side*0.85;
+      const ly=Math.sin(Math.abs(ang))*r*0.9 + Math.sin(legPhase*2+idx)*1.2;
+      ctx.beginPath(); ctx.moveTo(side*r*0.35,0); ctx.lineTo(lx,ly); ctx.stroke();
+    }
+    // 腹
+    ctx.beginPath(); ctx.ellipse(0,r*0.15,r*0.85,r*0.7,0,0,Math.PI*2);
+    const g=ctx.createRadialGradient(-2,-3,1,0,0,r);
+    g.addColorStop(0,"#f0d56a"); g.addColorStop(0.55,body); g.addColorStop(1,shell);
+    ctx.fillStyle=g; ctx.fill(); ctx.strokeStyle="#3a1a10"; ctx.lineWidth=1; ctx.stroke();
+    // 红宝石
+    ctx.fillStyle="#ef4444";
+    ctx.beginPath(); ctx.ellipse(0,r*0.1,r*0.28,r*0.2,0,0,Math.PI*2); ctx.fill();
+    // 眼
+    ctx.fillStyle=eye;
+    ctx.beginPath(); ctx.arc(-r*0.28,-r*0.25,1.5,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(r*0.28,-r*0.25,1.5,0,Math.PI*2); ctx.fill();
+  } else if(kind==="beetle"){
+    // 甲壳虫
+    ctx.beginPath(); ctx.ellipse(0,0,r*0.95,r*0.75,0,0,Math.PI*2);
+    const g=ctx.createRadialGradient(-r*0.2,-r*0.3,1,0,0,r);
+    g.addColorStop(0,"#e0a46a"); g.addColorStop(0.5,body); g.addColorStop(1,shell);
+    ctx.fillStyle=g; ctx.fill(); ctx.strokeStyle="#3a2410"; ctx.lineWidth=1; ctx.stroke();
+    // 壳缝
+    ctx.strokeStyle="rgba(0,0,0,.35)"; ctx.beginPath(); ctx.moveTo(0,-r*0.6); ctx.lineTo(0,r*0.55); ctx.stroke();
+    // 前爪
+    ctx.strokeStyle=shell; ctx.lineWidth=1.8;
+    ctx.beginPath(); ctx.moveTo(-r*0.4,r*0.2); ctx.lineTo(-r*1.1,r*0.55); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(r*0.4,r*0.2); ctx.lineTo(r*1.1,r*0.55); ctx.stroke();
+    // 眼
+    ctx.fillStyle=eye;
+    ctx.beginPath(); ctx.arc(-r*0.28,-r*0.1,1.5,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(r*0.28,-r*0.1,1.5,0,Math.PI*2); ctx.fill();
+  } else {
+    // 螨虫 / 刺壳虫
+    const legPhase=e.walk||0;
+    ctx.strokeStyle=shell; ctx.lineWidth=1.4; ctx.lineCap="round";
+    for(let i=0;i<4;i++){
+      const ang=-0.8+i*0.5 + Math.sin(legPhase+i)*0.12;
+      ctx.beginPath();
+      ctx.moveTo(-r*0.4, r*0.1);
+      ctx.lineTo(-r*1.15*Math.cos(ang*0.3), r*0.35+Math.sin(legPhase+i)*1.5+i);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(r*0.4, r*0.1);
+      ctx.lineTo(r*1.15*Math.cos(ang*0.3), r*0.35+Math.sin(legPhase+i+1)*1.5+i);
+      ctx.stroke();
+    }
+    ctx.beginPath(); ctx.ellipse(0,0,r*0.9,r*0.8,0,0,Math.PI*2);
+    const g=ctx.createRadialGradient(-r*0.25,-r*0.3,1,0,0,r);
+    g.addColorStop(0,"#b56a9a"); g.addColorStop(0.5,body); g.addColorStop(1,shell);
+    ctx.fillStyle=g; ctx.fill(); ctx.strokeStyle="#2a1020"; ctx.lineWidth=1; ctx.stroke();
+    // 背刺
+    ctx.fillStyle=shell;
+    for(let i=-2;i<=2;i++){
+      ctx.beginPath();
+      ctx.moveTo(i*r*0.22, -r*0.55);
+      ctx.lineTo(i*r*0.22+1.2, -r*0.95);
+      ctx.lineTo(i*r*0.22+2.4, -r*0.5);
+      ctx.fill();
+    }
+    // 眼
+    ctx.fillStyle=eye;
+    ctx.beginPath(); ctx.arc(-r*0.25,r*0.05,1.6,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(r*0.25,r*0.05,1.6,0,Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
 }
 
 function shadeColor(col, pct){
@@ -1177,12 +1343,47 @@ function resetDrag(){
   hideGhost();
 }
 
-// ============ 音效 ============
-let actx=null;
+// ============ 音效 + 简单背景音乐 ============
+let actx=null, bgmNodes=null, bgmOn=false;
 function initAudio(){
   if(!actx){ try{ actx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+  if(actx && actx.state==="suspended") actx.resume().catch(()=>{});
+  startBgm();
 }
 window.addEventListener("pointerdown", initAudio, {once:true});
+function startBgm(){
+  if(!actx || bgmOn) return;
+  bgmOn=true;
+  try{
+    const master=actx.createGain();
+    master.gain.value=0.035;
+    master.connect(actx.destination);
+    // 低沉底噪
+    const bufLen=actx.sampleRate*2;
+    const noiseBuf=actx.createBuffer(1, bufLen, actx.sampleRate);
+    const data=noiseBuf.getChannelData(0);
+    for(let i=0;i<bufLen;i++) data[i]=(Math.random()*2-1)*0.15;
+    const noise=actx.createBufferSource();
+    noise.buffer=noiseBuf; noise.loop=true;
+    const nf=actx.createBiquadFilter();
+    nf.type="lowpass"; nf.frequency.value=220;
+    const ng=actx.createGain(); ng.gain.value=0.35;
+    noise.connect(nf); nf.connect(ng); ng.connect(master);
+    noise.start();
+    // 两层柔和正弦铺底
+    const tones=[98,146.8];
+    const oscs=tones.map((f,i)=>{
+      const o=actx.createOscillator();
+      const g=actx.createGain();
+      o.type="sine"; o.frequency.value=f;
+      g.gain.value=0.25-i*0.08;
+      o.connect(g); g.connect(master);
+      o.start();
+      return o;
+    });
+    bgmNodes={master,noise,oscs};
+  }catch(e){ bgmOn=false; }
+}
 let sfxGate=0;
 function playSfx(kind){
   if(!actx) return;
@@ -1217,7 +1418,7 @@ const ui={
 };
 function updateHUD(){
   ui.level.textContent=game.level;
-  ui.wave.textContent=game.killed+"/"+WAVE_SIZE;
+  ui.wave.textContent=game.killed+"/"+waveSizeFor(game.level);
   ui.crystals.textContent=game.crystals;
   ui.slots.textContent=filledSlotCount()+"/"+SLOTS.length;
   if(game.phase==="prep"){
@@ -1247,11 +1448,34 @@ function win(){ game.over=true; showMsg("🎉 通关！","守住全部 40 关！
 function lose(){ game.over=true; showMsg("💥 失败","10 个水晶全没了，坚持到第 "+game.level+" 关"); }
 
 function loop(ts){
-  const dt=Math.min(0.05,(ts-game.lastTs)/1000||0);
-  game.lastTs=ts;
-  update(dt); draw(); updateHUD();
+  try{
+    if(document.visibilityState==="hidden"){
+      game.lastTs=ts;
+      requestAnimationFrame(loop);
+      return;
+    }
+    const dt=Math.min(0.05,(ts-game.lastTs)/1000||0);
+    game.lastTs=ts;
+    // 硬上限，防止卡顿后一帧堆出爆炸量实体
+    if(game.bullets.length>220) game.bullets=game.bullets.slice(-120);
+    if(game.effects.length>160) game.effects=game.effects.slice(-80);
+    if(game.clouds.length>40) game.clouds=game.clouds.slice(-20);
+    if(game.beams.length>40) game.beams=game.beams.slice(-20);
+    update(dt); draw(); updateHUD();
+  }catch(err){
+    console.error("game loop error", err);
+  }
   requestAnimationFrame(loop);
 }
+
+// 手机后台回来后恢复音效上下文，避免“黑屏/静音”
+document.addEventListener("visibilitychange", ()=>{
+  if(document.visibilityState==="visible"){
+    game.lastTs=performance.now();
+    if(actx && actx.state==="suspended") actx.resume().catch(()=>{});
+  }
+});
+window.addEventListener("pageshow", ()=>{ game.lastTs=performance.now(); });
 
 placeInitialTroops();
 startPrep(true);
