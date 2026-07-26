@@ -55,14 +55,16 @@ function makeTroop(level, ownerId, nextId, rng, typeKey){
 }
 
 function makeEnemy(level, nextId, rng){
-  const hp = Math.round(28 * Math.pow(1.2, level-1));
-  const def = Math.floor((level-1) * 1.4);
-  const speed = 38 + (level-1)*1.35;
+  // 每关血量/防御/速度都涨；第 2 关起就要认真合成
+  const hp = Math.round(32 * Math.pow(1.28, level-1) + (level>1 ? level*8 : 0));
+  const def = Math.floor((level-1) * 2.2 + (level>=5 ? (level-4)*1.5 : 0));
+  const speed = 40 + (level-1)*2.1 + (level>=10 ? (level-9)*0.6 : 0);
   const hue = (level*41 + rng()*40) % 360;
+  const bodyR = 10 + Math.min(5, (level-1)*0.18);
   const p0 = PATH[0];
   return {
     id: nextId(),
-    hpMax: hp, hp, def, speed,
+    hpMax: hp, hp, def, speed, bodyR,
     dist: 0,
     x: p0.x, y: p0.y,
     slowMul: 1, slowTimer: 0,
@@ -137,7 +139,7 @@ function publicState(state, viewerId){
     tray: (state.trays[viewerId]||[]).map(serializeTroop),
     enemies: state.enemies.filter(e=>!e.dead).map(e=>({
       id:e.id, hp:Math.max(0,e.hp), hpMax:e.hpMax,
-      x:e.x, y:e.y, color:e.color,
+      x:e.x, y:e.y, color:e.color, bodyR:e.bodyR||12,
       slow:e.slowMul<1, poison:e.poisonTimer>0,
     })),
     bullets: state.bullets.map(b=>({
@@ -211,16 +213,20 @@ function command(state, playerId, message){
     const troop=found.troop;
     const target=Number(message.targetSlot);
     if(!Number.isInteger(target)||target<0||target>=SLOT_COUNT) throw new Error("槽位无效");
-    if(found.source==="slot") state.slots[found.slotIndex]=null;
+    // 战场上的兵不能自由挪位，只能同级合成；待命区可部署到空位
+    if(found.source==="slot" && found.slotIndex===target){
+      return {ok:true}; // 放回原位，无操作
+    }
     const existing=state.slots[target];
     if(!existing){
+      if(found.source!=="tray") throw new Error("战场上的兵不能移动，只能合成");
       state.slots[target]=troop;
-      if(found.source==="tray") removeFromTray(state,playerId,troop.id);
+      removeFromTray(state,playerId,troop.id);
     } else if(existing.ownerId===playerId && existing.level===troop.level && troop.level<MAX_LEVEL){
+      if(found.source==="slot") state.slots[found.slotIndex]=null;
       state.slots[target]=makeTroop(troop.level+1, playerId, state.nextId, state.rng);
       if(found.source==="tray") removeFromTray(state,playerId,troop.id);
     } else {
-      if(found.source==="slot") state.slots[found.slotIndex]=troop;
       throw new Error("目标槽位不能放置");
     }
     state.revision++;

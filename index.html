@@ -308,12 +308,14 @@ function makeTroop(level){
 }
 
 function makeEnemy(level){
-  const hp = Math.round(28 * Math.pow(1.2, level-1));
-  const def = Math.floor((level-1) * 1.4);
-  const speed = 38 + (level-1)*1.35;
+  // 每关血量/防御/速度都涨；第 2 关起就要认真合成，合错容易翻车
+  const hp = Math.round(32 * Math.pow(1.28, level-1) + (level>1 ? level*8 : 0));
+  const def = Math.floor((level-1) * 2.2 + (level>=5 ? (level-4)*1.5 : 0));
+  const speed = 40 + (level-1)*2.1 + (level>=10 ? (level-9)*0.6 : 0);
   const hue = (level*41 + Math.random()*40) % 360;
+  const bodyR = 10 + Math.min(5, (level-1)*0.18);
   return {
-    id:newId(), hpMax:hp, hp, def, speed,
+    id:newId(), hpMax:hp, hp, def, speed, bodyR,
     slowTimer:0, slowMul:1,
     poisonTimer:0, poisonDps:0,
     seg:0, t:0,
@@ -363,10 +365,10 @@ function renderTray(){
       "background:#2c3244;border:2px solid "+border+";position:relative;padding:4px 2px;"+
       "touch-action:none;user-select:none;-webkit-user-select:none;";
     el.innerHTML=
-      '<div style="font-size:26px;line-height:1;pointer-events:none">'+tr.type.icon+'</div>'+
+      '<div style="font-size:20px;line-height:1;pointer-events:none;filter:drop-shadow(0 2px 1px rgba(0,0,0,.45))">'+tr.type.icon+'</div>'+
       '<div style="font-size:11px;color:#e8ebf0;margin-top:2px;font-weight:600;pointer-events:none">'+tr.type.name+'</div>'+
       '<div style="font-size:9px;color:#8b93a7;margin-top:1px;text-align:center;line-height:1.2;padding:0 2px;pointer-events:none">'+tr.type.desc+'</div>'+
-      '<div style="width:26px;height:5px;border-radius:3px;margin-top:3px;background:'+border+';pointer-events:none"></div>';
+      '<div style="width:22px;height:4px;border-radius:3px;margin-top:3px;background:'+border+';box-shadow:0 1px 2px rgba(0,0,0,.4);pointer-events:none"></div>';
     trayEl.appendChild(el);
   });
 }
@@ -783,21 +785,10 @@ function draw(){
     ctx.strokeStyle=`rgba(255,255,255,${a*0.5})`; ctx.lineWidth=1; ctx.stroke();
   }
 
-  // 兵（图标 + 等级色环 + 下方名字）
+  // 兵（更小底座 + 阴影立体感 + 等级色环 + 名字）
   for(const s of SLOTS){
     const tr=s.troop; if(!tr) continue;
-    ctx.beginPath(); ctx.arc(s.x,s.y,tr.range,0,Math.PI*2);
-    ctx.fillStyle = tr.mode==="aoe" ? "rgba(251,146,60,.05)" : "rgba(79,209,255,.04)";
-    ctx.fill();
-    ctx.beginPath(); ctx.arc(s.x,s.y,20,0,Math.PI*2);
-    ctx.fillStyle="#2c3244"; ctx.fill();
-    ctx.strokeStyle=LEVEL_COLORS[tr.level-1]; ctx.lineWidth=3; ctx.stroke();
-    ctx.font="26px serif"; ctx.textAlign="center"; ctx.textBaseline="middle";
-    ctx.fillText(tr.type.icon, s.x, s.y-2);
-    // 名字在正下方
-    ctx.font="bold 12px \"Microsoft YaHei\",sans-serif";
-    ctx.fillStyle="#e8ebf0";
-    ctx.fillText(tr.type.name, s.x, s.y+32);
+    drawTroopAt(s.x, s.y, tr, 1);
   }
 
   // 悬停描述气泡（名字 + 打法 + 描述）
@@ -835,23 +826,22 @@ function draw(){
     ctx.fillText(sub, bx+bw/2, by+46);
   }
 
-  // 妖怪
+  // 妖怪（更小 + 阴影立体感，沿路径走动）
   for(const e of game.enemies){
-    ctx.beginPath(); ctx.arc(e.x,e.y,15,0,Math.PI*2);
-    ctx.fillStyle=e.color; ctx.fill();
-    ctx.strokeStyle="#12151c"; ctx.lineWidth=2; ctx.stroke();
+    drawEnemyAt(e);
     if(e.slowMul<1){
-      ctx.beginPath(); ctx.arc(e.x,e.y,18,0,Math.PI*2);
+      ctx.beginPath(); ctx.arc(e.x,e.y-2,(e.bodyR||11)+3,0,Math.PI*2);
       ctx.strokeStyle="rgba(125,211,252,.8)"; ctx.lineWidth=2; ctx.stroke();
     }
     if(e.poisonTimer>0){
-      ctx.beginPath(); ctx.arc(e.x,e.y,19,0,Math.PI*2);
+      ctx.beginPath(); ctx.arc(e.x,e.y-2,(e.bodyR||11)+4,0,Math.PI*2);
       ctx.strokeStyle="rgba(132,204,22,.7)"; ctx.lineWidth=2; ctx.stroke();
     }
-    const w=30,h=4,p=Math.max(0,e.hp/e.hpMax);
-    ctx.fillStyle="#111"; ctx.fillRect(e.x-w/2,e.y-24,w,h);
+    const w=26,h=3,p=Math.max(0,e.hp/e.hpMax);
+    const barY=e.y-(e.bodyR||11)-12;
+    ctx.fillStyle="#111"; ctx.fillRect(e.x-w/2,barY,w,h);
     ctx.fillStyle=p>0.5?"#7ee787":p>0.25?"#fbbf24":"#f43f5e";
-    ctx.fillRect(e.x-w/2,e.y-24,w*p,h);
+    ctx.fillRect(e.x-w/2,barY,w*p,h);
   }
 
   // 子弹
@@ -864,26 +854,24 @@ function draw(){
   }
   ctx.globalAlpha=1;
 
-  // 拖拽预览（图标 + 名字）
+  // 拖拽预览
   if(drag.active && drag.troop){
     const tr=drag.troop;
-    ctx.beginPath(); ctx.arc(drag.mx,drag.my,20,0,Math.PI*2);
-    ctx.fillStyle="#2c3244"; ctx.globalAlpha=.9; ctx.fill();
-    ctx.strokeStyle=LEVEL_COLORS[tr.level-1]; ctx.lineWidth=3; ctx.stroke();
-    ctx.globalAlpha=1;
-    ctx.font="26px serif"; ctx.textAlign="center"; ctx.textBaseline="middle";
-    ctx.fillText(tr.type.icon, drag.mx, drag.my-2);
-    ctx.font="bold 11px \"Microsoft YaHei\",sans-serif";
-    ctx.fillStyle="#e8ebf0";
-    ctx.fillText(tr.type.name, drag.mx, drag.my+32);
+    drawTroopAt(drag.mx, drag.my, tr, 0.92);
     const s=slotAt(drag.mx,drag.my);
     if(s){
-      const canMerge=s.troop && s.troop.level===tr.level && s.troop.level<MAX_LEVEL;
-      ctx.strokeStyle=canMerge?"#7ee787":(s.troop?"#f43f5e":"#4fd1ff");
+      const fromTray=drag.from && drag.from.type==="tray";
+      const canMerge=s.troop && s.troop!==tr && s.troop.level===tr.level && tr.level<MAX_LEVEL;
+      const canPlace=!s.troop && fromTray;
+      ctx.strokeStyle=canMerge?"#7ee787":(canPlace?"#4fd1ff":"#f43f5e");
       ctx.lineWidth=3; ctx.strokeRect(s.x-28,s.y-28,56,56);
+      ctx.font="12px sans-serif";
       if(canMerge){
-        ctx.font="12px sans-serif"; ctx.fillStyle="#7ee787";
+        ctx.fillStyle="#7ee787";
         ctx.fillText("合成→随机造型", s.x, s.y-40);
+      } else if(!s.troop && !fromTray){
+        ctx.fillStyle="#f43f5e";
+        ctx.fillText("只能合成，不能移动", s.x, s.y-40);
       }
     }
   }
@@ -896,6 +884,88 @@ function hexA(hex,a){
     return `rgba(${r},${g},${b},${a})`;
   }
   return hex;
+}
+
+// 小兵：更小底座 + 脚下椭圆阴影 + 顶部高光，做出一点立体感
+function drawTroopAt(x, y, tr, alpha){
+  const a = alpha==null ? 1 : alpha;
+  const r = 14;
+  const icon = tr.type ? tr.type.icon : (tr.icon||"🤖");
+  const name = tr.type ? tr.type.name : (tr.name||"");
+  const mode = tr.mode || (tr.type && tr.type.mode) || "single";
+  const lv = (tr.level||1)-1;
+  ctx.save();
+  ctx.globalAlpha = a;
+  // 射程光圈（很淡）
+  if(tr.range){
+    ctx.beginPath(); ctx.arc(x,y,tr.range,0,Math.PI*2);
+    ctx.fillStyle = mode==="aoe" ? "rgba(251,146,60,.045)" : "rgba(79,209,255,.035)";
+    ctx.fill();
+  }
+  // 脚下阴影
+  ctx.beginPath(); ctx.ellipse(x, y+r-1, r*0.85, r*0.32, 0, 0, Math.PI*2);
+  ctx.fillStyle="rgba(0,0,0,.35)"; ctx.fill();
+  // 底座渐变（上亮下暗）
+  const g=ctx.createRadialGradient(x-3, y-5, 2, x, y, r);
+  g.addColorStop(0,"#3a4258");
+  g.addColorStop(0.55,"#2a3042");
+  g.addColorStop(1,"#1a1e2a");
+  ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+  ctx.fillStyle=g; ctx.fill();
+  // 等级色环
+  ctx.strokeStyle=LEVEL_COLORS[lv]||"#fff";
+  ctx.lineWidth=2.5; ctx.stroke();
+  // 顶部高光弧
+  ctx.beginPath(); ctx.arc(x,y,r-1.5,-Math.PI*0.85,-Math.PI*0.15);
+  ctx.strokeStyle="rgba(255,255,255,.28)"; ctx.lineWidth=1.5; ctx.stroke();
+  // 图标略抬起
+  ctx.font="18px serif"; ctx.textAlign="center"; ctx.textBaseline="middle";
+  ctx.fillStyle="#e8ebf0";
+  ctx.fillText(icon, x, y-1);
+  // 名字
+  if(name){
+    ctx.font='bold 10px "Microsoft YaHei",sans-serif';
+    ctx.fillStyle="#e8ebf0";
+    ctx.fillText(name, x, y+r+12);
+  }
+  ctx.restore();
+}
+
+// 妖怪：更小圆球 + 阴影 + 高光，沿路径走动
+function drawEnemyAt(e){
+  const r = e.bodyR || 11;
+  const x=e.x, y=e.y;
+  // 脚下阴影
+  ctx.beginPath(); ctx.ellipse(x, y+r*0.55, r*0.9, r*0.35, 0, 0, Math.PI*2);
+  ctx.fillStyle="rgba(0,0,0,.4)"; ctx.fill();
+  // 身体渐变
+  const g=ctx.createRadialGradient(x-r*0.3, y-r*0.45, r*0.15, x, y, r);
+  g.addColorStop(0,"#ffffffaa");
+  g.addColorStop(0.25, e.color||"#f43f5e");
+  g.addColorStop(1, shadeColor(e.color||"#f43f5e", -35));
+  ctx.beginPath(); ctx.arc(x, y-2, r, 0, Math.PI*2);
+  ctx.fillStyle=g; ctx.fill();
+  ctx.strokeStyle="#12151c"; ctx.lineWidth=1.5; ctx.stroke();
+}
+
+function shadeColor(col, pct){
+  // 支持 hsl(...) 与 #hex；失败时原样返回
+  if(typeof col==="string" && col.startsWith("hsl")){
+    const m=col.match(/hsl\(([-\d.]+),\s*([\d.]+)%,\s*([\d.]+)%\)/);
+    if(m){
+      const h=+m[1], s=+m[2], l=Math.max(5, Math.min(90, +m[3]+pct*0.4));
+      return `hsl(${h},${s}%,${l}%)`;
+    }
+  }
+  if(typeof col==="string" && col[0]==="#" && col.length===7){
+    const n=parseInt(col.slice(1),16);
+    let r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+    r=Math.max(0,Math.min(255, r+pct));
+    g=Math.max(0,Math.min(255, g+pct));
+    b=Math.max(0,Math.min(255, b+pct));
+    return `rgb(${r|0},${g|0},${b|0})`;
+  }
+  return col;
 }
 
 function drawCave(x,y){
@@ -1081,8 +1151,13 @@ function dropTroop(slot){
   const tr=drag.troop;
   if(!tr){ resetDrag(); return; }
   if(!slot){ returnTroop(); resetDrag(); return; }
-  if(!slot.troop){ slot.troop=tr; consumeSource(); resetDrag(); return; }
-  if(slot.troop.level===tr.level && tr.level<MAX_LEVEL){
+  const fromTray = drag.from && drag.from.type==="tray";
+  // 战场上的兵不能自由挪位，只能同级合成；待命区可部署到空位
+  if(!slot.troop){
+    if(fromTray){ slot.troop=tr; consumeSource(); resetDrag(); return; }
+    returnTroop(); resetDrag(); return;
+  }
+  if(slot.troop!==tr && slot.troop.level===tr.level && tr.level<MAX_LEVEL){
     slot.troop=makeTroop(tr.level+1);
     consumeSource(); playSfx("merge"); resetDrag(); return;
   }
@@ -1092,6 +1167,7 @@ function consumeSource(){
   if(drag.from && drag.from.type==="tray"){
     tray=tray.filter(t=>t.id!==drag.troop.id); renderTray();
   }
+  // 从战场拖出合成时，原槽位已在 beginDrag 清空，无需再处理
 }
 function returnTroop(){
   if(drag.from && drag.from.type==="slot") drag.from.slot.troop=drag.troop;
