@@ -107,7 +107,10 @@
   body.device-phone #tray { min-height:100px; max-height:28vh; }
   body.device-phone .trayTroop { min-width:72px; min-height:84px; }
   body.device-phone .hint { display:none; }
-  body.device-phone.orient-portrait #tray { min-height:110px; max-height:32vh; }
+  body.device-phone.orient-portrait #tray { min-height:60px; max-height:18vh; }
+  body.device-phone.orient-portrait #gameCanvas { width:100%; height:100%; object-fit:cover; }
+  body.device-phone.orient-portrait #hud { gap:3px; padding:3px 6px; font-size:10px; }
+  body.device-phone.orient-portrait #hud .val { font-size:12px; }
   body.device-phone.orient-landscape #stage { width:100%; max-width:100vw; }
   body.device-phone.orient-landscape #tray { min-height:84px; max-height:30vh; }
   body.device-phone.orient-landscape #hud { padding:4px 8px; }
@@ -234,6 +237,11 @@ function detectDevice(){
   b.classList.add(device.touch ? "input-touch" : "input-mouse");
   b.dataset.device = kind;
   b.dataset.orient = device.orient;
+
+  // 动态绘制缩放：小屏放大兵/妖怪，桌面保持原样
+  const box = document.getElementById("canvasBox").getBoundingClientRect();
+  const displayW = box.width || 960;
+  device.drawScale = Math.max(1.0, Math.min(2.8, 2.0 * Math.sqrt(960 / displayW)));
 }
 
 detectDevice();
@@ -980,7 +988,7 @@ function drawTroopAt(x, y, tr, alpha){
     ctx.fill();
   }
   ctx.save();
-  ctx.translate(x,y); ctx.scale(1.3,1.3); ctx.translate(-x,-y);
+  ctx.translate(x,y); ctx.scale(1.3*(device.drawScale||1),1.3*(device.drawScale||1)); ctx.translate(-x,-y);
   ctx.beginPath(); ctx.ellipse(x, y+12, 12, 4.5, 0, 0, Math.PI*2);
   ctx.fillStyle="rgba(0,0,0,.4)"; ctx.fill();
   ctx.beginPath(); ctx.arc(x, y+9, 10.5, 0, Math.PI*2);
@@ -1151,7 +1159,7 @@ function drawEnemyAt(e){
   const eye = e.eye || "#c4f042";
   const wob = Math.sin((e.walk||0)) * 0.18;
   ctx.save();
-  ctx.translate(x,y); ctx.scale(1.15,1.15); ctx.translate(-x,-y);
+  ctx.translate(x,y); ctx.scale(1.15*(device.drawScale||1),1.15*(device.drawScale||1)); ctx.translate(-x,-y);
   // 阴影
   ctx.beginPath(); ctx.ellipse(x, y+r*0.55, r*0.95, r*0.32, 0, 0, Math.PI*2);
   ctx.fillStyle="rgba(0,0,0,.4)"; ctx.fill();

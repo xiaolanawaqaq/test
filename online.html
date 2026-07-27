@@ -47,6 +47,13 @@
   #msg h2{margin-bottom:8px}
   #msg p{color:#b6bccb;margin-bottom:14px}
   #conn{position:fixed;left:10px;bottom:10px;font-size:12px;color:#8b93a7;z-index:20}
+
+  /* 手机竖屏：铺满 + 缩小待命区 */
+  body.device-phone.orient-portrait #tray{min-height:60px;max-height:18vh}
+  body.device-phone.orient-portrait canvas{width:100%;height:100%;object-fit:cover}
+  body.device-phone.orient-portrait .trayTroop{width:56px;min-height:56px;font-size:11px}
+  body.device-phone.orient-portrait #hud{padding:4px 8px;font-size:11px;gap:4px}
+  body.device-phone.orient-portrait #hud .val{font-size:13px}
 </style>
 </head>
 <body>
@@ -116,7 +123,30 @@
 <script>
 "use strict";
 
-const CV_W=960, CV_H=576, CELL=64, MAX_LEVEL=6, WAVE_SIZE=20, START_CRYSTALS=10;
+// 简易设备检测（用于竖屏放大绘制）
+const CV_W=960, CV_H=576;
+const device={drawScale:1};
+(function detectDevice(){
+  const w=window.innerWidth||375, h=window.innerHeight||667;
+  const portrait=h>=w;
+  const ua=(navigator.userAgent||"").toLowerCase();
+  const mobile=/iphone|android.*mobile|mobile/.test(ua);
+  document.body.classList.remove("device-phone","device-tablet","device-desktop","orient-portrait","orient-landscape");
+  document.body.classList.add(mobile?"device-phone":"device-desktop");
+  document.body.classList.add(portrait?"orient-portrait":"orient-landscape");
+  const box=document.getElementById("canvasBox").getBoundingClientRect();
+  device.drawScale=Math.max(1.0,Math.min(2.8,2.0*Math.sqrt(CV_W/(box.width||CV_W))));
+})();
+window.addEventListener("resize",()=>{
+  const w=window.innerWidth||375,h=window.innerHeight||667;
+  const portrait=h>=w;
+  document.body.classList.remove("orient-portrait","orient-landscape");
+  document.body.classList.add(portrait?"orient-portrait":"orient-landscape");
+  const box=document.getElementById("canvasBox").getBoundingClientRect();
+  device.drawScale=Math.max(1.0,Math.min(2.8,2.0*Math.sqrt(CV_W/(box.width||CV_W))));
+});
+
+const CELL=64, MAX_LEVEL=6, WAVE_SIZE=20, START_CRYSTALS=10;
 const LEVEL_COLORS=["#ffffff","#7ee787","#4fd1ff","#c084fc","#fb923c","#f43f5e"];
 const PATH=[{x:40,y:70},{x:860,y:70},{x:860,y:180},{x:100,y:180},{x:100,y:290},{x:860,y:290},{x:860,y:400},{x:100,y:400},{x:100,y:510},{x:520,y:510}];
 const SLOTS=[];
@@ -364,7 +394,7 @@ function drawTroopAt(x, y, tr, alpha){
     ctx.fill();
   }
   ctx.save();
-  ctx.translate(x,y); ctx.scale(1.3,1.3); ctx.translate(-x,-y);
+  ctx.translate(x,y); ctx.scale(1.3*(device.drawScale||1),1.3*(device.drawScale||1)); ctx.translate(-x,-y);
   ctx.beginPath(); ctx.ellipse(x, y+12, 12, 4.5, 0, 0, Math.PI*2);
   ctx.fillStyle="rgba(0,0,0,.4)"; ctx.fill();
   ctx.beginPath(); ctx.arc(x, y+9, 10.5, 0, Math.PI*2);
@@ -522,7 +552,7 @@ function drawEnemyAt(e){
   const eye = e.eye || "#c4f042";
   const wob = Math.sin((e.walk||0)) * 0.18;
   ctx.save();
-  ctx.translate(x,y); ctx.scale(1.15,1.15); ctx.translate(-x,-y);
+  ctx.translate(x,y); ctx.scale(1.15*(device.drawScale||1),1.15*(device.drawScale||1)); ctx.translate(-x,-y);
   ctx.beginPath(); ctx.ellipse(x, y+r*0.55, r*0.95, r*0.32, 0, 0, Math.PI*2);
   ctx.fillStyle="rgba(0,0,0,.4)"; ctx.fill();
   ctx.translate(x, y-2);
