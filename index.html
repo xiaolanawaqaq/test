@@ -52,6 +52,42 @@
     touch-action:manipulation; }
   .hint { color:#8b93a7; font-size:11px; margin-left:4px; max-width:120px; line-height:1.3; }
 
+  #startupOverlay { position:fixed; inset:0; z-index:120; display:grid; place-items:center;
+    overflow:auto; touch-action:pan-y; padding:max(20px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
+    background:radial-gradient(circle at 50% 38%,rgba(28,78,105,.64),rgba(8,11,19,.96) 52%,#05070d 100%); }
+  #startupOverlay[hidden] { display:none; }
+  .startPanel { position:relative; width:min(92vw,520px); padding:28px 24px 24px; overflow:hidden;
+    border:1px solid rgba(79,209,255,.42); border-radius:20px;
+    background:linear-gradient(155deg,rgba(28,36,52,.96),rgba(12,16,27,.98));
+    box-shadow:0 24px 80px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.08); }
+  .startPanel::before { content:""; position:absolute; inset:0; pointer-events:none; opacity:.22;
+    background:repeating-linear-gradient(0deg,transparent 0 20px,rgba(79,209,255,.14) 21px),repeating-linear-gradient(90deg,transparent 0 20px,rgba(79,209,255,.1) 21px); }
+  .startMark { position:relative; width:118px; height:92px; margin:0 auto 16px; }
+  .startCave { position:absolute; left:50%; top:8px; width:72px; height:72px; transform:translateX(-50%);
+    border:5px solid #3c4d64; border-radius:48% 48% 42% 42%; background:radial-gradient(circle at 50% 45%,#02040a 0 42%,#101827 45% 64%,#26354a 68%);
+    box-shadow:0 0 30px rgba(79,209,255,.18),inset 0 0 18px #000; }
+  .startBug { position:absolute; left:50%; top:33px; width:30px; height:21px; transform:translateX(-50%);
+    border-radius:52% 52% 42% 42%; background:radial-gradient(circle at 38% 30%,#c084fc,#693265 55%,#27152d 100%);
+    box-shadow:0 8px 8px rgba(0,0,0,.45); animation:bugReady 1.8s ease-in-out infinite; }
+  .startBug::before,.startBug::after { content:""; position:absolute; top:7px; width:15px; height:12px; border-top:2px solid #a855f7; border-bottom:2px solid #a855f7; }
+  .startBug::before { right:23px; transform:skewY(-20deg); } .startBug::after { left:23px; transform:skewY(20deg); }
+  .startEyebrow { position:relative; color:#4fd1ff; text-align:center; font-size:11px; letter-spacing:.24em; font-family:Consolas,monospace; }
+  .startPanel h1 { position:relative; margin:7px 0 6px; text-align:center; font-size:clamp(28px,8vw,44px); line-height:1; letter-spacing:.08em; text-shadow:0 0 24px rgba(79,209,255,.25); }
+  .startPanel h1 span { color:#4fd1ff; }
+  .startLead { position:relative; color:#9ca9bc; text-align:center; font-size:13px; line-height:1.6; margin:0 auto 20px; max-width:360px; }
+  .startActions { position:relative; display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .startAction { min-height:58px; border-radius:12px; border:1px solid transparent; display:flex; flex-direction:column; align-items:flex-start; justify-content:center; padding:10px 15px; text-decoration:none; color:#fff; cursor:pointer; touch-action:manipulation; transition:transform .16s,border-color .16s,filter .16s; }
+  .startAction:hover { transform:translateY(-2px); filter:brightness(1.08); }
+  .startAction:focus-visible { outline:3px solid #fff; outline-offset:3px; }
+  .startAction strong { font-size:16px; } .startAction small { margin-top:2px; font-size:10px; opacity:.72; }
+  #startSolo { background:linear-gradient(135deg,#15729a,#2456a7); border-color:#4fd1ff; }
+  #startMulti { background:linear-gradient(135deg,#177448,#15803d); border-color:#7ee787; }
+  .startRule { position:relative; display:flex; justify-content:center; gap:14px; margin-top:17px; color:#728097; font-size:10px; }
+  .startRule span::before { content:"◆"; color:#4fd1ff; margin-right:5px; font-size:7px; }
+  @keyframes bugReady { 0%,100%{transform:translate(-50%,0) scale(1)} 50%{transform:translate(-50%,5px) scale(1.04)} }
+  @media (max-width:480px){ .startPanel{padding:22px 16px 18px}.startActions{grid-template-columns:1fr}.startMark{transform:scale(.88);margin-bottom:8px}.startRule{gap:8px;flex-wrap:wrap} }
+  @media (prefers-reduced-motion:reduce){ .startBug{animation:none}.startAction{transition:none} }
+
   /* ===== 自动布局：由 JS 在 body 上挂 class ===== */
   /* 竖屏通用 */
   body.orient-portrait #wrap { justify-content:flex-start; }
@@ -105,8 +141,21 @@
 </style>
 </head>
 <body>
+<div id="startupOverlay" role="dialog" aria-modal="true" aria-labelledby="startTitle">
+  <section class="startPanel">
+    <div class="startMark" aria-hidden="true"><div class="startCave"></div><div class="startBug"></div></div>
+    <div class="startEyebrow">MERGE DEFENSE // 40 WAVES</div>
+    <h1 id="startTitle">合兵<span>塔防</span></h1>
+    <p class="startLead">虫群正从洞口涌出。部署随机兵种，同级合成，守住最后 10 枚水晶。</p>
+    <div class="startActions">
+      <button class="startAction" id="startSolo" type="button"><strong>单人守卫</strong><small>立即进入 120 秒备战</small></button>
+      <a class="startAction" id="startMulti" href="/online.html"><strong>三人联机</strong><small>创建房间或输入房间码</small></a>
+    </div>
+    <div class="startRule"><span>15 种兵型</span><span>6 级合成</span><span>40 关虫潮</span></div>
+  </section>
+</div>
 <div id="wrap">
-  <div id="stage">
+  <div id="stage" inert>
     <div id="hud">
       <div class="stat"><span class="lbl">关卡</span><span class="val" id="uiLevel">1</span><span class="lbl">/40</span></div>
       <div class="stat"><span class="lbl">妖怪</span><span class="val" id="uiWave">0/20</span></div>
@@ -255,6 +304,7 @@ const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
 const game = {
+  started: false,
   level: 1,
   crystals: START_CRYSTALS,
   phase: "prep",
@@ -409,7 +459,7 @@ function endWave(){
 
 // ============ 战斗 ============
 function update(dt){
-  if(game.over) return;
+  if(game.over || !game.started) return;
 
   if(game.phase==="prep"){
     game.prepTimer-=dt;
@@ -929,6 +979,8 @@ function drawTroopAt(x, y, tr, alpha){
     ctx.fillStyle = mode==="aoe" ? "rgba(251,146,60,.045)" : "rgba(79,209,255,.035)";
     ctx.fill();
   }
+  ctx.save();
+  ctx.translate(x,y); ctx.scale(1.3,1.3); ctx.translate(-x,-y);
   ctx.beginPath(); ctx.ellipse(x, y+12, 12, 4.5, 0, 0, Math.PI*2);
   ctx.fillStyle="rgba(0,0,0,.4)"; ctx.fill();
   ctx.beginPath(); ctx.arc(x, y+9, 10.5, 0, Math.PI*2);
@@ -1079,11 +1131,12 @@ function drawTroopAt(x, y, tr, alpha){
     else mecha("#d7e6f2","#5a7a96","#e2e8f0",ring,14,false);
   }
 
+  ctx.restore();
   if(name){
     ctx.font='bold 10px "Microsoft YaHei",sans-serif';
     ctx.textAlign="center"; ctx.textBaseline="middle";
     ctx.fillStyle="#e8ebf0";
-    ctx.fillText(name, x, y+20);
+    ctx.fillText(name, x, y+27);
   }
   ctx.restore();
 }
@@ -1098,6 +1151,7 @@ function drawEnemyAt(e){
   const eye = e.eye || "#c4f042";
   const wob = Math.sin((e.walk||0)) * 0.18;
   ctx.save();
+  ctx.translate(x,y); ctx.scale(1.15,1.15); ctx.translate(-x,-y);
   // 阴影
   ctx.beginPath(); ctx.ellipse(x, y+r*0.55, r*0.95, r*0.32, 0, 0, Math.PI*2);
   ctx.fillStyle="rgba(0,0,0,.4)"; ctx.fill();
@@ -1563,6 +1617,20 @@ document.addEventListener("visibilitychange", ()=>{
   }
 });
 window.addEventListener("pageshow", ()=>{ game.lastTs=performance.now(); });
+
+const startOverlay=document.getElementById("startupOverlay");
+const stageEl=document.getElementById("stage");
+document.getElementById("startSolo").addEventListener("click", ()=>{
+  initAudio();
+  game.started=true;
+  game.phase="prep";
+  game.prepTimer=PREP_SECONDS;
+  game.lastTs=performance.now();
+  stageEl.removeAttribute("inert");
+  startOverlay.hidden=true;
+  document.getElementById("btnSkip").focus({preventScroll:true});
+});
+requestAnimationFrame(()=>document.getElementById("startSolo").focus({preventScroll:true}));
 
 placeInitialTroops();
 startPrep(true);
