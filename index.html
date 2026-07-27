@@ -1461,7 +1461,7 @@ function dropTroop(slot){
   const fromTray = drag.from && drag.from.type==="tray";
   // 战场上的兵不能自由挪位，只能同级合成；待命区可部署到空位
   if(!slot.troop){
-    if(fromTray){ slot.troop=tr; consumeSource(); resetDrag(); return; }
+    if(fromTray){ slot.troop=tr; consumeSource(); playSfx("deploy"); resetDrag(); return; }
     returnTroop(); resetDrag(); return;
   }
   if(slot.troop!==tr && slot.troop.level===tr.level && tr.level<MAX_LEVEL){
@@ -1538,9 +1538,11 @@ function playSfx(kind){
   else if(kind==="tank"){ f=70; dur=0.22; type="sawtooth"; vol=0.18; }
   else if(kind==="robot"){ f=320; dur=0.10; type="triangle"; vol=0.11; }
   else if(kind==="rocket"){ f=520; dur=0.18; type="sine"; vol=0.13; }
+  else if(kind==="deploy"){ f=360; dur=0.12; type="triangle"; vol=0.14; }
   else if(kind==="merge"){ f=660; dur=0.18; type="triangle"; vol=0.16; }
   o.type=type; o.frequency.setValueAtTime(f,now);
   if(kind==="tank"||kind==="rocket") o.frequency.exponentialRampToValueAtTime(Math.max(30,f*0.4),now+dur);
+  if(kind==="deploy") o.frequency.exponentialRampToValueAtTime(180,now+dur);
   if(kind==="merge") o.frequency.exponentialRampToValueAtTime(f*1.8,now+dur);
   g.gain.setValueAtTime(vol,now);
   g.gain.exponentialRampToValueAtTime(0.001,now+dur);

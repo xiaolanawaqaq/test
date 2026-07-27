@@ -784,11 +784,13 @@ function playSfx(kind){
   else if(kind==="tank"){ f=70; dur=0.22; type="sawtooth"; vol=0.18; }
   else if(kind==="robot"){ f=320; dur=0.10; type="triangle"; vol=0.11; }
   else if(kind==="rocket"){ f=520; dur=0.18; type="sine"; vol=0.13; }
+  else if(kind==="deploy"){ f=360; dur=0.12; type="triangle"; vol=0.14; }
   else if(kind==="merge"){ f=660; dur=0.18; type="triangle"; vol=0.16; }
   else if(kind==="hit"){ f=140; dur=0.04; type="square"; vol=0.06; }
   else if(kind==="wave"){ f=240; dur=0.2; type="triangle"; vol=0.14; }
   o.type=type; o.frequency.setValueAtTime(f,now);
   if(kind==="tank"||kind==="rocket") o.frequency.exponentialRampToValueAtTime(Math.max(30,f*0.4),now+dur);
+  if(kind==="deploy") o.frequency.exponentialRampToValueAtTime(180,now+dur);
   if(kind==="merge"||kind==="wave") o.frequency.exponentialRampToValueAtTime(f*1.8,now+dur);
   g.gain.setValueAtTime(vol,now);
   g.gain.exponentialRampToValueAtTime(0.001,now+dur);
@@ -796,9 +798,13 @@ function playSfx(kind){
 }
 
 // 根据服务器状态变化补本地音效
-let prevSfx={revision:-1, killed:0, phase:null, level:1, bullets:0, crystals:10};
+let prevSfx={revision:-1, killed:0, phase:null, level:1, bullets:0, crystals:10, tray:null, ownSlots:null};
 function tickSfxFromState(s){
   if(!s) return;
+  const trayCount=(s.tray||[]).length;
+  const ownSlots=(s.slots||[]).filter(t=>t&&t.ownerId===me.id).length;
+  // 只有“待命减少且自己的战场兵增加”才是成功部署；合成和失败放置不会响
+  if(prevSfx.tray!==null && trayCount<prevSfx.tray && ownSlots>prevSfx.ownSlots) playSfx("deploy");
   if(s.phase==="battle" && prevSfx.phase==="prep") playSfx("wave");
   if((s.level||1)>(prevSfx.level||1)) playSfx("merge");
   // 子弹数增加 → 开火声（按 style 选音色）
@@ -811,7 +817,8 @@ function tickSfxFromState(s){
   if((s.crystals||0)<(prevSfx.crystals||10)) playSfx("tank");
   prevSfx={
     revision:s.revision, killed:s.killed||0, phase:s.phase,
-    level:s.level||1, bullets:bl, crystals:s.crystals||0
+    level:s.level||1, bullets:bl, crystals:s.crystals||0,
+    tray:trayCount, ownSlots
   };
 }
 
