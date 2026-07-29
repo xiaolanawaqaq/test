@@ -7,6 +7,7 @@ const PREP_SECONDS = 120;
 const START_TROOPS = 5;
 const TROOPS_PER_STAGE = 2;
 const MAX_LEVEL = 6;
+const SLOT_COUNT = 32;
 const CELL = 64;
 
 // ============ 原始单路径（合作模式 / 单机） ============
