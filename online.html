@@ -7,17 +7,17 @@
 <title>合兵塔防 · 三人联机</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{height:100%;height:100dvh;background:#1a1d29;color:#e8ebf0;font-family:"Segoe UI","Microsoft YaHei",sans-serif;overflow:hidden;touch-action:none;overscroll-behavior:none}
+  html,body{height:100%;height:100dvh;background:#0a1008;color:#e8f0e0;font-family:"Segoe UI","Microsoft YaHei",sans-serif;overflow:hidden;touch-action:none;overscroll-behavior:none}
   #app{display:flex;flex-direction:column;width:100%;height:100%;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
   button,input{font:inherit}
-  button{border:none;border-radius:10px;background:#3b82f6;color:#fff;font-weight:700;min-height:44px;padding:10px 16px;cursor:pointer;touch-action:manipulation}
-  button.secondary{background:#2c3244}
-  button:disabled{background:#3a4157;color:#6b7488;cursor:default}
-  input{width:100%;min-height:44px;border-radius:10px;border:1px solid #3a4157;background:#12151c;color:#e8ebf0;padding:10px 12px}
-  .panel{max-width:520px;width:min(96vw,520px);margin:auto;background:#232838;border:1px solid #3a4157;border-radius:16px;padding:18px;display:none}
+  button{border:none;border-radius:10px;background:#3a6a2a;color:#e8f0e0;font-weight:700;min-height:44px;padding:10px 16px;cursor:pointer;touch-action:manipulation}
+  button.secondary{background:#2a3020}
+  button:disabled{background:#1a2010;color:#5a6a48;cursor:default}
+  input{width:100%;min-height:44px;border-radius:10px;border:1px solid #3a4a30;background:#0a1008;color:#e8f0e0;padding:10px 12px}
+  .panel{max-width:520px;width:min(96vw,520px);margin:auto;background:#1a2018;border:1px solid #3a4a30;border-radius:16px;padding:18px;display:none}
   .panel.active{display:block}
   .panel h1{font-size:22px;margin-bottom:8px}
-  .panel p,.muted{color:#8b93a7;font-size:13px;line-height:1.5}
+  .panel p,.muted{color:#7a8a68;font-size:13px;line-height:1.5}
   .row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
   .row > *{flex:1}
   .status{margin-top:10px;font-size:13px;color:#4fd1ff}
@@ -30,20 +30,20 @@
   .link{font-size:12px;word-break:break-all;color:#b6bccb;margin-top:6px}
   #stage{display:none;flex-direction:column;width:min(960px,100%);height:100%;margin:0 auto}
   #stage.active{display:flex}
-  #hud{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 10px;background:#232838;border-bottom:2px solid #3a4157}
+  #hud{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 10px;background:#1a2018;border-bottom:2px solid #3a4a30}
   #hud .stat{display:flex;gap:4px;align-items:center;white-space:nowrap}
-  #hud .lbl{color:#8b93a7;font-size:11px}
+  #hud .lbl{color:#7a8a68;font-size:11px}
   #hud .val{font-weight:700}
   #playersBar{width:100%;display:flex;gap:6px;flex-wrap:wrap}
   #playersBar .chip{background:#12151c;border-radius:999px;padding:4px 10px;font-size:12px}
-  #canvasBox{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;background:#12151c}
-  canvas{width:100%;height:auto;max-height:100%;background:#20242f;touch-action:none;display:block}
-  #tray{min-height:96px;max-height:28vh;background:#232838;border-top:2px solid #3a4157;display:flex;align-items:center;padding:6px 10px;gap:8px}
-  #tray .title{color:#8b93a7;font-size:11px;writing-mode:vertical-lr}
+  #canvasBox{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;background:#0a1008}
+  canvas{width:100%;height:auto;max-height:100%;background:#1a2018;touch-action:none;display:block}
+  #tray{min-height:96px;max-height:28vh;background:#1a2018;border-top:2px solid #3a4a30;display:flex;align-items:center;padding:6px 10px;gap:8px}
+  #tray .title{color:#7a8a68;font-size:11px;writing-mode:vertical-lr}
   #trayItems{display:flex;gap:8px;overflow-x:auto;flex:1;align-items:center;touch-action:pan-x}
-  .trayTroop{width:76px;min-height:84px;border-radius:10px;background:#2c3244;border:2px solid #4fd1ff;display:flex;flex-direction:column;align-items:center;justify-content:center;touch-action:none;padding:4px;flex:0 0 auto}
+  .trayTroop{width:82px;min-height:88px;border-radius:12px;background:linear-gradient(180deg,#2a3040,#222830);border:2px solid #7ee787;display:flex;flex-direction:column;align-items:center;justify-content:center;touch-action:none;padding:5px;flex:0 0 auto;box-shadow:0 2px 8px rgba(0,0,0,.35)}
   #msg{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:40}
-  #msg .box{background:rgba(20,23,34,.96);border:2px solid #3b82f6;border-radius:14px;padding:22px;width:min(92vw,420px);text-align:center}
+  #msg .box{background:rgba(15,20,12,.96);border:2px solid #5a7a48;border-radius:14px;padding:22px;width:min(92vw,420px);text-align:center}
   #msg h2{margin-bottom:8px}
   #msg p{color:#b6bccb;margin-bottom:14px}
   #conn{position:fixed;left:10px;bottom:10px;font-size:12px;color:#8b93a7;z-index:20}
@@ -62,6 +62,16 @@
     <h1>合兵塔防 · 三人联机</h1>
     <p>三人各自手机联网，共用路线、妖怪和水晶。先创建房间，再让朋友用房间码或邀请链接加入。</p>
     <div class="row"><input id="nameInput" maxlength="20" placeholder="你的昵称（可选）"></div>
+    <div class="row" style="gap:6px">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:8px 12px;border-radius:8px;background:#1a2018;border:1px solid #3a4a30;flex:1">
+        <input type="radio" name="gameMode" value="coop" checked style="accent-color:#7ee787">
+        <div><div style="font-size:13px;font-weight:700;color:#e8f0e0">合作模式</div><div style="font-size:10px;color:#7a8a68">三人共守一条路</div></div>
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:8px 12px;border-radius:8px;background:#1a2018;border:1px solid #3a4a30;flex:1">
+        <input type="radio" name="gameMode" value="independent" style="accent-color:#fb923c">
+        <div><div style="font-size:13px;font-weight:700;color:#e8f0e0">独立路径</div><div style="font-size:10px;color:#7a8a68">每人守自己的路</div></div>
+      </label>
+    </div>
     <div class="row">
       <button id="btnCreate">创建房间</button>
       <button id="btnSolo" class="secondary" type="button">返回单机</button>
@@ -108,7 +118,10 @@
       <div id="playersBar"></div>
       <button id="btnWave" disabled style="margin-left:auto">开始进攻</button>
     </div>
-    <div id="canvasBox"><canvas id="gameCanvas" width="960" height="576"></canvas></div>
+    <div id="canvasBox">
+      <canvas id="gameCanvas" width="960" height="576"></canvas>
+      <canvas id="miniMap" width="160" height="120" style="position:absolute;top:8px;right:8px;width:160px;height:120px;border-radius:8px;border:1px solid rgba(120,160,100,.5);background:rgba(10,16,8,.85);cursor:pointer;display:none;z-index:10"></canvas>
+    </div>
     <div id="tray">
       <div class="title">我的待命</div>
       <div id="trayItems"></div>
@@ -148,12 +161,34 @@ window.addEventListener("resize",()=>{
 
 const CELL=64, MAX_LEVEL=6, WAVE_SIZE=20, START_CRYSTALS=10;
 const LEVEL_COLORS=["#ffffff","#7ee787","#4fd1ff","#c084fc","#fb923c","#f43f5e"];
-const PATH=[{x:40,y:70},{x:860,y:70},{x:860,y:180},{x:100,y:180},{x:100,y:290},{x:860,y:290},{x:860,y:400},{x:100,y:400},{x:100,y:510},{x:520,y:510}];
+const PATH=[{x:40,y:70},{x:860,y:70},{x:860,y:180},{x:100,y:180},{x:100,y:290},{x:860,y:290},{x:860,y:400},{x:100,y:400},{x:100,y:520},{x:520,y:520}];
 const SLOTS=[];
 (function(){
-  const bandY=[125,235,345,455], startX=150, gap=CELL+6, cols=8;
+  const bandY=[115,225,335,445], startX=150, gap=CELL+6, cols=8;
   bandY.forEach(y=>{ for(let c=0;c<cols;c++) SLOTS.push({x:startX+c*gap,y,troop:null}); });
 })();
+// 独立模式的3条路径和槽位
+const INDEP_PATHS=[
+  [{x:30,y:55},{x:860,y:55},{x:860,y:105},{x:100,y:105},{x:100,y:155},{x:860,y:155}],
+  [{x:30,y:215},{x:860,y:215},{x:860,y:265},{x:100,y:265},{x:100,y:315},{x:860,y:315}],
+  [{x:30,y:375},{x:860,y:375},{x:860,y:425},{x:100,y:425},{x:100,y:475},{x:860,y:475}],
+];
+const INDEP_SLOTS=[
+  [{x:220,y:72},{x:340,y:72},{x:460,y:72},{x:580,y:72},{x:220,y:102},{x:340,y:102},{x:460,y:102},{x:580,y:102},{x:220,y:132},{x:340,y:132},{x:460,y:132},{x:580,y:132},{x:220,y:162},{x:340,y:162},{x:460,y:162},{x:580,y:162}],
+  [{x:220,y:232},{x:340,y:232},{x:460,y:232},{x:580,y:232},{x:220,y:262},{x:340,y:262},{x:460,y:262},{x:580,y:262},{x:220,y:292},{x:340,y:292},{x:460,y:292},{x:580,y:292},{x:220,y:322},{x:340,y:322},{x:460,y:322},{x:580,y:322}],
+  [{x:220,y:392},{x:340,y:392},{x:460,y:392},{x:580,y:392},{x:220,y:422},{x:340,y:422},{x:460,y:422},{x:580,y:422},{x:220,y:452},{x:340,y:452},{x:460,y:452},{x:580,y:452},{x:220,y:482},{x:340,y:482},{x:460,y:482},{x:580,y:482}],
+];
+// 独立模式的3条路径和槽位
+const INDEP_PATHS=[
+  [{x:30,y:55},{x:860,y:55},{x:860,y:105},{x:100,y:105},{x:100,y:155},{x:860,y:155}],
+  [{x:30,y:215},{x:860,y:215},{x:860,y:265},{x:100,y:265},{x:100,y:315},{x:860,y:315}],
+  [{x:30,y:375},{x:860,y:375},{x:860,y:425},{x:100,y:425},{x:100,y:475},{x:860,y:475}],
+];
+const INDEP_SLOTS=[
+  [{x:220,y:72},{x:340,y:72},{x:460,y:72},{x:580,y:72},{x:220,y:102},{x:340,y:102},{x:460,y:102},{x:580,y:102},{x:220,y:132},{x:340,y:132},{x:460,y:132},{x:580,y:132},{x:220,y:162},{x:340,y:162},{x:460,y:162},{x:580,y:162}],
+  [{x:220,y:232},{x:340,y:232},{x:460,y:232},{x:580,y:232},{x:220,y:262},{x:340,y:262},{x:460,y:262},{x:580,y:262},{x:220,y:292},{x:340,y:292},{x:460,y:292},{x:580,y:292},{x:220,y:322},{x:340,y:322},{x:460,y:322},{x:580,y:322}],
+  [{x:220,y:392},{x:340,y:392},{x:460,y:392},{x:580,y:392},{x:220,y:422},{x:340,y:422},{x:460,y:422},{x:580,y:422},{x:220,y:452},{x:340,y:452},{x:460,y:452},{x:580,y:452},{x:220,y:482},{x:340,y:482},{x:460,y:482},{x:580,y:482}],
+];
 
 const canvas=document.getElementById("gameCanvas");
 const ctx=canvas.getContext("2d");
@@ -189,6 +224,9 @@ let room=null;
 let state=null;
 let lastRevision=-1;
 let localTray=[];
+let currentViewPath=-1; // -1=自己的路, 0/1/2=队友的路
+let myPathIndex=-1;
+let gameMode="coop";
 const drag={active:false,troop:null,from:null,mx:0,my:0,pointerId:null};
 const ghostEl=document.createElement("div");
 ghostEl.style.cssText="position:fixed;pointer-events:none;z-index:80;display:none;width:72px;height:72px;border-radius:12px;background:rgba(44,50,68,.95);border:2px solid #4fd1ff;align-items:center;justify-content:center;flex-direction:column;transform:translate(-50%,-60%)";
@@ -246,12 +284,15 @@ function renderLobby(){
   if(!room) return;
   ui.roomCode.textContent=room.roomCode||"------";
   ui.inviteLink.textContent=inviteUrl(room.inviteToken);
+  gameMode=room.gameMode||"coop";
   ui.playerList.innerHTML="";
+  const modeLabel=gameMode==="independent"?"独立路径":"合作模式";
   (room.players||[]).forEach((p,i)=>{
     const el=document.createElement("div");
     el.className="player";
     const role=p.id===room.hostId?"房主":("玩家"+(i+1));
-    el.innerHTML=`<div><div>${p.name||p.id}${p.id===me.id?"（我）":""}</div><div class="tag">${role} · ${p.connected?"在线":"离线"}</div></div><div class="tag">${p.ready?"已准备":"未准备"}</div>`;
+    const pathInfo=gameMode==="independent"?` · 路${i+1}`:"";
+    el.innerHTML=`<div><div>${p.name||p.id}${p.id===me.id?"（我）":""}</div><div class="tag">${role}${pathInfo} · ${p.connected?"在线":"离线"}</div></div><div class="tag">${p.ready?"已准备":"未准备"}</div>`;
     ui.playerList.appendChild(el);
   });
   const meP=(room.players||[]).find(p=>p.id===me.id);
@@ -280,10 +321,33 @@ function applyState(s){
   state=s;
   lastRevision=s.revision;
   localTray=s.tray||[];
-  // slots
-  for(let i=0;i<SLOTS.length;i++){
-    const t=s.slots&&s.slots[i];
-    SLOTS[i].troop=t?{...t,type:{name:t.name,icon:t.icon,tag:t.tag,desc:t.desc},mode:t.mode,range:t.range||110}:null;
+  gameMode=s.mode||"coop";
+  myPathIndex=s.pathIndex!=null?s.pathIndex:-1;
+
+  if(gameMode==="independent" && myPathIndex>=0){
+    // 独立模式：用自己路径的槽位
+    const indepSlots=INDEP_SLOTS[myPathIndex]||INDEP_SLOTS[0];
+    // 清空并重建SLOTS为16个槽位
+    SLOTS.length=0;
+    indepSlots.forEach(pos=>SLOTS.push({x:pos.x,y:pos.y,troop:null}));
+    const slotData=s.slots||[];
+    for(let i=0;i<SLOTS.length;i++){
+      const t=slotData[i];
+      SLOTS[i].troop=t?{...t,type:{name:t.name,icon:t.icon,tag:t.tag,desc:t.desc},mode:t.mode,range:t.range||110}:null;
+    }
+    document.getElementById("miniMap").style.display="block";
+  } else {
+    // 合作模式：还原32个槽位
+    if(SLOTS.length!==32){
+      SLOTS.length=0;
+      const bandY=[115,225,335,445], startX=150, gap=CELL+6, cols=8;
+      bandY.forEach(y=>{ for(let c=0;c<cols;c++) SLOTS.push({x:startX+c*gap,y,troop:null}); });
+    }
+    for(let i=0;i<SLOTS.length;i++){
+      const t=s.slots&&s.slots[i];
+      SLOTS[i].troop=t?{...t,type:{name:t.name,icon:t.icon,tag:t.tag,desc:t.desc},mode:t.mode,range:t.range||110}:null;
+    }
+    document.getElementById("miniMap").style.display="none";
   }
   try{ tickSfxFromState(s); }catch(e){}
   renderTray();
@@ -393,8 +457,17 @@ function drawTroopAt(x, y, tr, alpha){
     ctx.fillStyle = mode==="aoe" ? "rgba(251,146,60,.045)" : "rgba(79,209,255,.035)";
     ctx.fill();
   }
+  // level glow
+  if(lv>0){
+    const glowPulse=0.5+Math.sin(t*3+lv)*0.3;
+    const glowR=14+lv*2;
+    const grd=ctx.createRadialGradient(x,y+4,4,x,y+4,glowR);
+    grd.addColorStop(0,`rgba(${lv>=4?255:100},${lv>=4?100:200},255,${0.12*glowPulse*lv})`);
+    grd.addColorStop(1,"transparent");
+    ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(x,y+4,glowR,0,Math.PI*2); ctx.fill();
+  }
   ctx.save();
-  ctx.translate(x,y); ctx.scale(1.3*(device.drawScale||1),1.3*(device.drawScale||1)); ctx.translate(-x,-y);
+  ctx.translate(x,y); ctx.scale(1.5*(device.drawScale||1),1.5*(device.drawScale||1)); ctx.translate(-x,-y);
   ctx.beginPath(); ctx.ellipse(x, y+12, 12, 4.5, 0, 0, Math.PI*2);
   ctx.fillStyle="rgba(0,0,0,.4)"; ctx.fill();
   ctx.beginPath(); ctx.arc(x, y+9, 10.5, 0, Math.PI*2);
@@ -535,10 +608,13 @@ function drawTroopAt(x, y, tr, alpha){
 
   ctx.restore();
   if(name){
-    ctx.font='bold 10px "Microsoft YaHei",sans-serif';
+    ctx.font='bold 11px "Microsoft YaHei",sans-serif';
     ctx.textAlign="center"; ctx.textBaseline="middle";
-    ctx.fillStyle="#e8ebf0";
-    ctx.fillText(name, x, y+27);
+    const tw=ctx.measureText(name).width;
+    ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x-tw/2-4, y+20, tw+8, 16, 4) : ctx.rect(x-tw/2-4, y+20, tw+8, 16);
+    ctx.fillStyle="rgba(15,20,12,.7)"; ctx.fill();
+    ctx.fillStyle="#e8f0e0";
+    ctx.fillText(name, x, y+28);
   }
   ctx.restore();
 }
@@ -552,7 +628,7 @@ function drawEnemyAt(e){
   const eye = e.eye || "#c4f042";
   const wob = Math.sin((e.walk||0)) * 0.18;
   ctx.save();
-  ctx.translate(x,y); ctx.scale(1.15*(device.drawScale||1),1.15*(device.drawScale||1)); ctx.translate(-x,-y);
+  ctx.translate(x,y); ctx.scale(1.35*(device.drawScale||1),1.35*(device.drawScale||1)); ctx.translate(-x,-y);
   ctx.beginPath(); ctx.ellipse(x, y+r*0.55, r*0.95, r*0.32, 0, 0, Math.PI*2);
   ctx.fillStyle="rgba(0,0,0,.4)"; ctx.fill();
   ctx.translate(x, y-2);
@@ -640,30 +716,76 @@ function draw(){
   try{
   ctx.setTransform(1,0,0,1,0,0);
   ctx.clearRect(0,0,CV_W,CV_H);
-  ctx.fillStyle="#1c2030"; ctx.fillRect(0,0,CV_W,CV_H);
-  ctx.lineWidth=48; ctx.lineJoin="round"; ctx.lineCap="round";
-  ctx.strokeStyle="#2a3040";
-  ctx.beginPath(); ctx.moveTo(PATH[0].x,PATH[0].y);
-  for(let i=1;i<PATH.length;i++) ctx.lineTo(PATH[i].x,PATH[i].y);
+
+  // 确定当前渲染的路径
+  const isIndep=gameMode==="independent" && state;
+  const viewIdx=isIndep?(currentViewPath>=0?currentViewPath:myPathIndex):0;
+  const activePath=isIndep?(INDEP_PATHS[viewIdx]||INDEP_PATHS[0]):PATH;
+
+  // terrain background
+  ctx.fillStyle="#1a2818"; ctx.fillRect(0,0,CV_W,CV_H);
+  ctx.fillStyle="rgba(30,50,25,.6)";
+  for(let i=0;i<35;i++){ const gx=(i*137+43)%CV_W, gy=(i*211+71)%CV_H, gr=18+(i*7)%30; ctx.beginPath(); ctx.arc(gx,gy,gr,0,Math.PI*2); ctx.fill(); }
+  ctx.fillStyle="rgba(40,65,30,.4)";
+  for(let i=0;i<25;i++){ const gx=(i*193+29)%CV_W, gy=(i*157+53)%CV_H, gr=12+(i*11)%22; ctx.beginPath(); ctx.arc(gx,gy,gr,0,Math.PI*2); ctx.fill(); }
+  ctx.strokeStyle="rgba(60,90,50,.12)"; ctx.lineWidth=1;
+  for(let gx=0;gx<CV_W;gx+=48){ ctx.beginPath(); ctx.moveTo(gx,0); ctx.lineTo(gx,CV_H); ctx.stroke(); }
+  for(let gy=0;gy<CV_H;gy+=48){ ctx.beginPath(); ctx.moveTo(0,gy); ctx.lineTo(CV_W,gy); ctx.stroke(); }
+
+  // path
+  ctx.lineWidth=72; ctx.lineJoin="round"; ctx.lineCap="round";
+  ctx.strokeStyle="#141a0e";
+  ctx.beginPath(); ctx.moveTo(activePath[0].x,activePath[0].y);
+  for(let i=1;i<activePath.length;i++) ctx.lineTo(activePath[i].x,activePath[i].y);
   ctx.stroke();
-  ctx.lineWidth=36; ctx.strokeStyle="#333b4f"; ctx.stroke();
+  ctx.lineWidth=60; ctx.strokeStyle="#3a4228"; ctx.stroke();
+  ctx.lineWidth=50; ctx.strokeStyle="#4a5238"; ctx.stroke();
+  ctx.lineWidth=40; ctx.strokeStyle="#555d42"; ctx.stroke();
+  ctx.lineWidth=2; ctx.strokeStyle="rgba(200,210,180,.22)"; ctx.setLineDash([14,11]);
+  ctx.beginPath(); ctx.moveTo(activePath[0].x,activePath[0].y);
+  for(let i=1;i<activePath.length;i++) ctx.lineTo(activePath[i].x,activePath[i].y);
+  ctx.stroke(); ctx.setLineDash([]);
+
   // cave
-  ctx.beginPath(); ctx.ellipse(PATH[0].x,PATH[0].y,28,34,0,0,Math.PI*2);
-  ctx.fillStyle="#0d0f16"; ctx.fill();
-  // slots
+  const caveX=activePath[0].x, caveY=activePath[0].y;
+  ctx.beginPath(); ctx.ellipse(caveX,caveY+6,36,22,0,0,Math.PI*2);
+  ctx.fillStyle="#0a0e08"; ctx.fill(); ctx.strokeStyle="#5a6a50"; ctx.lineWidth=4; ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(caveX,caveY,30,28,0,0,Math.PI*2);
+  ctx.fillStyle="#0d1108"; ctx.fill(); ctx.strokeStyle="#6a7a58"; ctx.lineWidth=3; ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(caveX,caveY,18,18,0,0,Math.PI*2);
+  ctx.fillStyle="#050804"; ctx.fill();
+  ctx.strokeStyle="#4a5a40"; ctx.lineWidth=3; ctx.lineCap="butt";
+  ctx.beginPath(); ctx.moveTo(caveX-32,caveY-16); ctx.lineTo(caveX+32,caveY-16); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(caveX-28,caveY-20); ctx.lineTo(caveX+28,caveY-20); ctx.stroke();
+  // military deployment slots
   for(const s of SLOTS){
     if(!s.troop){
-      ctx.strokeStyle="rgba(120,130,160,.22)"; ctx.lineWidth=2; ctx.setLineDash([5,5]);
-      ctx.strokeRect(s.x-26,s.y-26,52,52); ctx.setLineDash([]);
+      const sz=22;
+      ctx.strokeStyle="rgba(120,160,100,.4)"; ctx.lineWidth=2; ctx.lineCap="butt";
+      ctx.beginPath(); ctx.moveTo(s.x-sz,s.y-sz+8); ctx.lineTo(s.x-sz,s.y-sz); ctx.lineTo(s.x-sz+8,s.y-sz); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s.x+sz-8,s.y-sz); ctx.lineTo(s.x+sz,s.y-sz); ctx.lineTo(s.x+sz,s.y-sz+8); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s.x-sz,s.y+sz-8); ctx.lineTo(s.x-sz,s.y+sz); ctx.lineTo(s.x-sz+8,s.y+sz); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s.x+sz-8,s.y+sz); ctx.lineTo(s.x+sz,s.y+sz); ctx.lineTo(s.x+sz,s.y+sz-8); ctx.stroke();
+      ctx.strokeStyle="rgba(120,160,100,.2)"; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(s.x-6,s.y); ctx.lineTo(s.x+6,s.y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s.x,s.y-6); ctx.lineTo(s.x,s.y+6); ctx.stroke();
     }
   }
-  // crystals
-  const end=PATH[PATH.length-1];
+  // crystals with glow
+  const end=activePath[activePath.length-1];
   const crystals=state?state.crystals:START_CRYSTALS;
+  const t2=(typeof performance!=="undefined" ? performance.now() : 0)/1000;
   for(let i=0;i<START_CRYSTALS;i++){
     const cx=end.x-90+(i%5)*40, cy=end.y-14+((i/5)|0)*30, alive=i<crystals;
-    ctx.beginPath(); ctx.moveTo(cx,cy-10); ctx.lineTo(cx+8,cy); ctx.lineTo(cx,cy+10); ctx.lineTo(cx-8,cy); ctx.closePath();
-    ctx.fillStyle=alive?"#4fd1ff":"#2b3140"; ctx.fill();
+    const pulse=alive?0.6+Math.sin(t2*2.5+i*0.8)*0.4:0;
+    if(alive){
+      const grd=ctx.createRadialGradient(cx,cy,2,cx,cy,18);
+      grd.addColorStop(0,`rgba(79,209,255,${0.25*pulse})`); grd.addColorStop(1,"transparent");
+      ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(cx,cy,18,0,Math.PI*2); ctx.fill();
+    }
+    ctx.beginPath(); ctx.moveTo(cx,cy-12); ctx.lineTo(cx+9,cy); ctx.lineTo(cx,cy+12); ctx.lineTo(cx-9,cy); ctx.closePath();
+    ctx.fillStyle=alive?`rgba(79,209,255,${0.7+pulse*0.3})`:"#1a2820"; ctx.fill();
+    if(alive){ ctx.strokeStyle=`rgba(200,240,255,${0.5+pulse*0.5})`; ctx.lineWidth=1.5; ctx.stroke(); }
   }
   // poison clouds
   for(const c of (state&&state.clouds)||[]){
@@ -687,13 +809,15 @@ function draw(){
       ctx.fillStyle=`rgba(251,146,60,${a*0.35})`; ctx.fill();
     }
   }
-  // beams
+  // beams with glow
   for(const b of (state&&state.beams)||[]){
     const a=Math.min(1,(b.life||0.2)*3);
     ctx.beginPath(); ctx.moveTo(b.x,b.y); ctx.lineTo(b.tx,b.ty);
+    ctx.strokeStyle=`rgba(79,209,255,${a*0.3})`; ctx.lineWidth=8; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(b.x,b.y); ctx.lineTo(b.tx,b.ty);
     ctx.strokeStyle=`rgba(79,209,255,${a*0.9})`; ctx.lineWidth=3; ctx.stroke();
     ctx.beginPath(); ctx.moveTo(b.x,b.y); ctx.lineTo(b.tx,b.ty);
-    ctx.strokeStyle=`rgba(255,255,255,${a*0.5})`; ctx.lineWidth=1; ctx.stroke();
+    ctx.strokeStyle=`rgba(255,255,255,${a*0.6})`; ctx.lineWidth=1; ctx.stroke();
   }
   // troops（更小 + 阴影立体感）
   for(const s of SLOTS){
@@ -719,19 +843,24 @@ function draw(){
       ctx.beginPath(); ctx.arc(e.x,e.y-2,(e.bodyR||11)+4,0,Math.PI*2);
       ctx.strokeStyle="rgba(132,204,22,.7)"; ctx.lineWidth=2; ctx.stroke();
     }
-    const w=26,h=3,p=Math.max(0,e.hp/e.hpMax);
-    const barY=e.y-(e.bodyR||11)-12;
+    const w=32,h=4,p=Math.max(0,e.hp/e.hpMax);
+    const barY=e.y-(e.bodyR||11)-14;
     ctx.fillStyle="#111"; ctx.fillRect(e.x-w/2,barY,w,h);
     ctx.fillStyle=p>0.5?"#7ee787":p>0.25?"#fbbf24":"#f43f5e";
     ctx.fillRect(e.x-w/2,barY,w*p,h);
+    ctx.strokeStyle="rgba(0,0,0,.5)"; ctx.lineWidth=1; ctx.strokeRect(e.x-w/2,barY,w,h);
   }
-  // bullets
+  // bullets with glow trail
   for(const b of (state&&state.bullets)||[]){
-    ctx.globalAlpha=0.85;
+    const a=Math.max(0.3,(b.life||0.1)/(b.maxLife||0.2));
+    ctx.globalAlpha=a;
+    const glow=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,(b.size||3)*3);
+    glow.addColorStop(0,b.color||"#ffe58a"); glow.addColorStop(1,"transparent");
+    ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(b.x,b.y,(b.size||3)*3,0,Math.PI*2); ctx.fill();
     ctx.beginPath(); ctx.moveTo(b.sx,b.sy); ctx.lineTo(b.x,b.y);
     ctx.strokeStyle=b.color||"#ffe58a"; ctx.lineWidth=1.5; ctx.stroke();
     ctx.beginPath(); ctx.arc(b.x,b.y,b.size||3,0,Math.PI*2);
-    ctx.fillStyle=b.color||"#ffe58a"; ctx.fill();
+    ctx.fillStyle="#fff"; ctx.fill();
   }
   ctx.globalAlpha=1;
   // drag ghost on canvas
@@ -758,8 +887,12 @@ function draw(){
   }
   }catch(err){
     console.error("draw error", err);
-    try{ ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle="#1c2030"; ctx.fillRect(0,0,CV_W,CV_H); }catch(_){}
+    try{ ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle="#1a2818"; ctx.fillRect(0,0,CV_W,CV_H); }catch(_){}
   }
+  // vignette
+  const vg=ctx.createRadialGradient(CV_W/2,CV_H/2,CV_W*0.32,CV_W/2,CV_H/2,CV_W*0.72);
+  vg.addColorStop(0,"transparent"); vg.addColorStop(1,"rgba(0,0,0,.35)");
+  ctx.fillStyle=vg; ctx.fillRect(0,0,CV_W,CV_H);
 }
 
 // ============ 音效 + 简单背景音乐 ============
@@ -852,9 +985,149 @@ function tickSfxFromState(s){
   };
 }
 
+// ============ 迷你地图（独立模式） ============
+const miniMapCanvas=document.getElementById("miniMap");
+const mmCtx=miniMapCanvas?miniMapCanvas.getContext("2d"):null;
+const MM_W=160, MM_H=120, MM_PAD=8;
+const MM_SCALE_X=(MM_W-MM_PAD*2)/960;
+const MM_SCALE_Y=(MM_H-MM_PAD*2)/576;
+
+function drawMiniMap(){
+  if(!mmCtx || !state || gameMode!=="independent") return;
+  mmCtx.clearRect(0,0,MM_W,MM_H);
+  mmCtx.fillStyle="rgba(10,16,8,.9)";
+  mmCtx.fillRect(0,0,MM_W,MM_H);
+
+  // 画三条路径
+  const colors=["#4fd1ff","#7ee787","#fb923c"];
+  for(let p=0;p<3;p++){
+    const path=INDEP_PATHS[p];
+    const isMe=p===myPathIndex;
+    const isView=currentViewPath===p || (currentViewPath===-1 && isMe);
+    mmCtx.strokeStyle=isView?colors[p]:"rgba(120,140,100,.4)";
+    mmCtx.lineWidth=isMe?2:1;
+    mmCtx.beginPath();
+    mmCtx.moveTo(MM_PAD+path[0].x*MM_SCALE_X, MM_PAD+path[0].y*MM_SCALE_Y);
+    for(let i=1;i<path.length;i++){
+      mmCtx.lineTo(MM_PAD+path[i].x*MM_SCALE_X, MM_PAD+path[i].y*MM_SCALE_Y);
+    }
+    mmCtx.stroke();
+
+    // 玩家标签
+    const player=state.players.find(pl=>pl.pathIndex===p);
+    if(player){
+      mmCtx.font="bold 9px sans-serif";
+      mmCtx.fillStyle=isMe?"#e8f0e0":"#7a8a68";
+      mmCtx.textAlign="left";
+      mmCtx.fillText(player.name, MM_PAD+4, MM_PAD+p*38+12);
+    }
+  }
+
+  // 高亮当前查看的路径
+  if(currentViewPath>=0){
+    const path=INDEP_PATHS[currentViewPath];
+    mmCtx.strokeStyle=colors[currentViewPath];
+    mmCtx.lineWidth=2;
+    mmCtx.setLineDash([3,3]);
+    mmCtx.strokeRect(MM_PAD-2, MM_PAD-2, MM_W-MM_PAD*2+4, MM_H-MM_PAD*2+4);
+    mmCtx.setLineDash([]);
+  }
+}
+
+// 迷你地图点击切换视角
+if(miniMapCanvas){
+  miniMapCanvas.addEventListener("click", e=>{
+    const rect=miniMapCanvas.getBoundingClientRect();
+    const clickY=(e.clientY-rect.top)/rect.height*MM_H;
+    // 判断点击了哪条路径
+    for(let p=0;p<3;p++){
+      const bandTop=MM_PAD+p*38;
+      const bandBot=bandTop+36;
+      if(clickY>=bandTop && clickY<=bandBot){
+        if(currentViewPath===p){
+          currentViewPath=-1; // 点自己的路回到默认
+        } else {
+          currentViewPath=p;
+        }
+        return;
+      }
+    }
+  });
+}
+
+// ============ 迷你地图（独立模式） ============
+const miniMapCanvas=document.getElementById("miniMap");
+const mmCtx=miniMapCanvas?miniMapCanvas.getContext("2d"):null;
+const MM_W=160, MM_H=120, MM_PAD=8;
+const MM_SCALE_X=(MM_W-MM_PAD*2)/960;
+const MM_SCALE_Y=(MM_H-MM_PAD*2)/576;
+
+function drawMiniMap(){
+  if(!mmCtx || !state || gameMode!=="independent") return;
+  mmCtx.clearRect(0,0,MM_W,MM_H);
+  mmCtx.fillStyle="rgba(10,16,8,.9)";
+  mmCtx.fillRect(0,0,MM_W,MM_H);
+
+  // 画三条路径
+  const colors=["#4fd1ff","#7ee787","#fb923c"];
+  for(let p=0;p<3;p++){
+    const path=INDEP_PATHS[p];
+    const isMe=p===myPathIndex;
+    const isView=currentViewPath===p || (currentViewPath===-1 && isMe);
+    mmCtx.strokeStyle=isView?colors[p]:"rgba(120,140,100,.4)";
+    mmCtx.lineWidth=isMe?2:1;
+    mmCtx.beginPath();
+    mmCtx.moveTo(MM_PAD+path[0].x*MM_SCALE_X, MM_PAD+path[0].y*MM_SCALE_Y);
+    for(let i=1;i<path.length;i++){
+      mmCtx.lineTo(MM_PAD+path[i].x*MM_SCALE_X, MM_PAD+path[i].y*MM_SCALE_Y);
+    }
+    mmCtx.stroke();
+
+    // 玩家标签
+    const player=state.players.find(pl=>pl.pathIndex===p);
+    if(player){
+      mmCtx.font="bold 9px sans-serif";
+      mmCtx.fillStyle=isMe?"#e8f0e0":"#7a8a68";
+      mmCtx.textAlign="left";
+      mmCtx.fillText(player.name, MM_PAD+4, MM_PAD+p*38+12);
+    }
+  }
+
+  // 高亮当前查看的路径
+  if(currentViewPath>=0){
+    const path=INDEP_PATHS[currentViewPath];
+    mmCtx.strokeStyle=colors[currentViewPath];
+    mmCtx.lineWidth=2;
+    mmCtx.setLineDash([3,3]);
+    mmCtx.strokeRect(MM_PAD-2, MM_PAD-2, MM_W-MM_PAD*2+4, MM_H-MM_PAD*2+4);
+    mmCtx.setLineDash([]);
+  }
+}
+
+// 迷你地图点击切换视角
+if(miniMapCanvas){
+  miniMapCanvas.addEventListener("click", e=>{
+    const rect=miniMapCanvas.getBoundingClientRect();
+    const clickY=(e.clientY-rect.top)/rect.height*MM_H;
+    // 判断点击了哪条路径
+    for(let p=0;p<3;p++){
+      const bandTop=MM_PAD+p*38;
+      const bandBot=bandTop+36;
+      if(clickY>=bandTop && clickY<=bandBot){
+        if(currentViewPath===p){
+          currentViewPath=-1; // 点自己的路回到默认
+        } else {
+          currentViewPath=p;
+        }
+        return;
+      }
+    }
+  });
+}
+
 function loop(){
   try{
-    if(document.visibilityState!=="hidden") draw();
+    if(document.visibilityState!=="hidden"){ draw(); drawMiniMap(); }
   }catch(err){
     console.error("draw loop error", err);
   }
@@ -921,7 +1194,9 @@ window.addEventListener("pointercancel", ()=>{
 document.getElementById("btnCreate").onclick=()=>{
   showErr("home","");
   me.name=document.getElementById("nameInput").value.trim()||me.name;
-  net.send("create",{name:me.name});
+  const mode=document.querySelector('input[name="gameMode"]:checked')?.value||"coop";
+  gameMode=mode;
+  net.send("create",{name:me.name,mode});
 };
 document.getElementById("btnJoin").onclick=()=>{
   showErr("home","");

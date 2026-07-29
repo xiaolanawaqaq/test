@@ -17,70 +17,70 @@
   #stage { display:flex; flex-direction:column; width:min(960px,100%);
     max-height:100%; flex:1 1 auto; min-height:0; }
   #hud { width:100%; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
-    padding:8px 10px; background:#232838; border-bottom:2px solid #3a4157;
+    padding:8px 10px; background:#1a2018; border-bottom:2px solid #3a4a30;
     font-size:14px; flex:0 0 auto; }
   #hud .stat { display:flex; align-items:center; gap:4px; white-space:nowrap; }
-  #hud .lbl { color:#8b93a7; font-size:11px; }
+  #hud .lbl { color:#7a8a68; font-size:11px; }
   #hud .val { font-weight:700; font-size:15px; }
   #crystals { color:#4fd1ff; }
   #btnSkip { margin-left:auto; padding:8px 14px; border:none; border-radius:8px;
-    background:#3b82f6; color:#fff; font-size:14px; cursor:pointer; font-weight:600;
+    background:#3a6a2a; color:#e8f0e0; font-size:14px; cursor:pointer; font-weight:600;
     min-height:40px; touch-action:manipulation; }
-  #btnSkip:hover { background:#2f6fd6; }
-  #btnSkip:disabled { background:#3a4157; color:#6b7488; cursor:default; }
+  #btnSkip:hover { background:#4a7a3a; }
+  #btnSkip:disabled { background:#2a3020; color:#5a6a48; cursor:default; }
   #canvasBox { position:relative; flex:1 1 auto; min-height:0; width:100%;
     display:flex; align-items:center; justify-content:center; background:#12151c; }
   #gameCanvas { background:#20242f; display:block; cursor:pointer;
     width:100%; height:auto; max-height:100%; object-fit:contain;
     touch-action:none; }
-  #tray { width:100%; min-height:96px; max-height:28vh; background:#232838;
-    border-top:2px solid #3a4157; display:flex; align-items:center;
+  #tray { width:100%; min-height:96px; max-height:28vh; background:#1a2018;
+    border-top:2px solid #3a4a30; display:flex; align-items:center;
     padding:6px 10px; gap:8px; flex:0 0 auto; }
-  #tray .title { color:#8b93a7; font-size:11px; writing-mode:vertical-lr;
+  #tray .title { color:#7a8a68; font-size:11px; writing-mode:vertical-lr;
     text-orientation:upright; letter-spacing:2px; flex:0 0 auto; }
   #trayItems { display:flex; gap:8px; flex:1; overflow-x:auto; height:100%;
     align-items:center; -webkit-overflow-scrolling:touch; touch-action:pan-x; }
   .trayTroop { touch-action:none; flex:0 0 auto; }
   #msg { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-    background:rgba(20,23,34,.94); border:2px solid #3b82f6; border-radius:14px;
+    background:rgba(15,20,12,.94); border:2px solid #5a7a48; border-radius:14px;
     padding:22px 28px; text-align:center; display:none; z-index:50;
     width:min(92vw,420px); }
   #msg h1 { font-size:22px; margin-bottom:10px; }
-  #msg p { color:#b6bccb; margin-bottom:16px; line-height:1.5; font-size:14px; }
-  #msg button { padding:10px 22px; border:none; border-radius:8px; background:#3b82f6;
-    color:#fff; font-size:15px; cursor:pointer; font-weight:600; min-height:44px;
+  #msg p { color:#b6ccb0; margin-bottom:16px; line-height:1.5; font-size:14px; }
+  #msg button { padding:10px 22px; border:none; border-radius:8px; background:#3a6a2a;
+    color:#e8f0e0; font-size:15px; cursor:pointer; font-weight:600; min-height:44px;
     touch-action:manipulation; }
   .hint { color:#8b93a7; font-size:11px; margin-left:4px; max-width:120px; line-height:1.3; }
 
   #startupOverlay { position:fixed; inset:0; z-index:120; display:grid; place-items:center;
     overflow:auto; touch-action:pan-y; padding:max(20px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
-    background:radial-gradient(circle at 50% 38%,rgba(28,78,105,.64),rgba(8,11,19,.96) 52%,#05070d 100%); }
+    background:radial-gradient(circle at 50% 38%,rgba(40,70,30,.64),rgba(8,14,8,.96) 52%,#030806 100%); }
   #startupOverlay[hidden] { display:none; }
   .startPanel { position:relative; width:min(92vw,520px); padding:28px 24px 24px; overflow:hidden;
-    border:1px solid rgba(79,209,255,.42); border-radius:20px;
-    background:linear-gradient(155deg,rgba(28,36,52,.96),rgba(12,16,27,.98));
+    border:1px solid rgba(120,180,80,.42); border-radius:20px;
+    background:linear-gradient(155deg,rgba(28,36,28,.96),rgba(12,16,12,.98));
     box-shadow:0 24px 80px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.08); }
-  .startPanel::before { content:""; position:absolute; inset:0; pointer-events:none; opacity:.22;
-    background:repeating-linear-gradient(0deg,transparent 0 20px,rgba(79,209,255,.14) 21px),repeating-linear-gradient(90deg,transparent 0 20px,rgba(79,209,255,.1) 21px); }
+  .startPanel::before { content:""; position:absolute; inset:0; pointer-events:none; opacity:.18;
+    background:repeating-linear-gradient(0deg,transparent 0 20px,rgba(120,180,80,.14) 21px),repeating-linear-gradient(90deg,transparent 0 20px,rgba(120,180,80,.1) 21px); }
   .startMark { position:relative; width:118px; height:92px; margin:0 auto 16px; }
   .startCave { position:absolute; left:50%; top:8px; width:72px; height:72px; transform:translateX(-50%);
-    border:5px solid #3c4d64; border-radius:48% 48% 42% 42%; background:radial-gradient(circle at 50% 45%,#02040a 0 42%,#101827 45% 64%,#26354a 68%);
-    box-shadow:0 0 30px rgba(79,209,255,.18),inset 0 0 18px #000; }
+    border:5px solid #5a6a48; border-radius:48% 48% 42% 42%; background:radial-gradient(circle at 50% 45%,#020804 0 42%,#0a1a08 45% 64%,#1a2a12 68%);
+    box-shadow:0 0 30px rgba(120,180,80,.18),inset 0 0 18px #000; }
   .startBug { position:absolute; left:50%; top:33px; width:30px; height:21px; transform:translateX(-50%);
-    border-radius:52% 52% 42% 42%; background:radial-gradient(circle at 38% 30%,#c084fc,#693265 55%,#27152d 100%);
+    border-radius:52% 52% 42% 42%; background:radial-gradient(circle at 38% 30%,#8a9a6a,#3a4a2a 55%,#1a2010 100%);
     box-shadow:0 8px 8px rgba(0,0,0,.45); animation:bugReady 1.8s ease-in-out infinite; }
-  .startBug::before,.startBug::after { content:""; position:absolute; top:7px; width:15px; height:12px; border-top:2px solid #a855f7; border-bottom:2px solid #a855f7; }
+  .startBug::before,.startBug::after { content:""; position:absolute; top:7px; width:15px; height:12px; border-top:2px solid #6a8a4a; border-bottom:2px solid #6a8a4a; }
   .startBug::before { right:23px; transform:skewY(-20deg); } .startBug::after { left:23px; transform:skewY(20deg); }
-  .startEyebrow { position:relative; color:#4fd1ff; text-align:center; font-size:11px; letter-spacing:.24em; font-family:Consolas,monospace; }
-  .startPanel h1 { position:relative; margin:7px 0 6px; text-align:center; font-size:clamp(28px,8vw,44px); line-height:1; letter-spacing:.08em; text-shadow:0 0 24px rgba(79,209,255,.25); }
-  .startPanel h1 span { color:#4fd1ff; }
+  .startEyebrow { position:relative; color:#7a9a5a; text-align:center; font-size:11px; letter-spacing:.24em; font-family:Consolas,monospace; }
+  .startPanel h1 { position:relative; margin:7px 0 6px; text-align:center; font-size:clamp(28px,8vw,44px); line-height:1; letter-spacing:.08em; text-shadow:0 0 24px rgba(120,180,80,.25); }
+  .startPanel h1 span { color:#7ee787; }
   .startLead { position:relative; color:#9ca9bc; text-align:center; font-size:13px; line-height:1.6; margin:0 auto 20px; max-width:360px; }
   .startActions { position:relative; display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   .startAction { min-height:58px; border-radius:12px; border:1px solid transparent; display:flex; flex-direction:column; align-items:flex-start; justify-content:center; padding:10px 15px; text-decoration:none; color:#fff; cursor:pointer; touch-action:manipulation; transition:transform .16s,border-color .16s,filter .16s; }
   .startAction:hover { transform:translateY(-2px); filter:brightness(1.08); }
   .startAction:focus-visible { outline:3px solid #fff; outline-offset:3px; }
   .startAction strong { font-size:16px; } .startAction small { margin-top:2px; font-size:10px; opacity:.72; }
-  #startSolo { background:linear-gradient(135deg,#15729a,#2456a7); border-color:#4fd1ff; }
+  #startSolo { background:linear-gradient(135deg,#2a5a2a,#1a4a1a); border-color:#7ee787; }
   #startMulti { background:linear-gradient(135deg,#177448,#15803d); border-color:#7ee787; }
   .startRule { position:relative; display:flex; justify-content:center; gap:14px; margin-top:17px; color:#728097; font-size:10px; }
   .startRule span::before { content:"◆"; color:#4fd1ff; margin-right:5px; font-size:7px; }
@@ -296,12 +296,12 @@ const PATH = [
   {x:860, y:180}, {x:100, y:180},
   {x:100, y:290}, {x:860, y:290},
   {x:860, y:400}, {x:100, y:400},
-  {x:100, y:510}, {x:520, y:510}
+  {x:100, y:520}, {x:520, y:520}
 ];
 
 const SLOTS = [];
 (function buildSlots(){
-  const bandY = [125, 235, 345, 455];
+  const bandY = [115, 225, 335, 445];
   const startX = 150, gap = CELL + 6, cols = 8;
   bandY.forEach(y=>{
     for(let c=0;c<cols;c++) SLOTS.push({x:startX + c*gap, y, troop:null});
@@ -396,7 +396,7 @@ function waveSizeFor(level){
   return WAVE_SIZE + Math.floor((level-1)/2) + (level>=6 ? level-5 : 0);
 }
 function spawnIntervalFor(level){
-  return Math.max(0.38, 0.72 - (level-1)*0.035);
+  return Math.max(0.62, 1.05 - (level-1)*0.032);
 }
 
 // ============ 待命区 ============
@@ -434,15 +434,17 @@ function renderTray(){
     el.title = tr.type.name+" · "+tr.type.tag+"\n"+tr.type.desc+"\n等级 "+tr.level+"（脚下颜色区分）";
     const border=LEVEL_COLORS[tr.level-1];
     el.style.cssText=
-      "width:76px;height:88px;flex:0 0 auto;border-radius:10px;cursor:grab;"+
+      "width:82px;height:96px;flex:0 0 auto;border-radius:12px;cursor:grab;"+
       "display:flex;flex-direction:column;align-items:center;justify-content:center;"+
-      "background:#2c3244;border:2px solid "+border+";position:relative;padding:4px 2px;"+
-      "touch-action:none;user-select:none;-webkit-user-select:none;";
+      "background:linear-gradient(180deg,#2a3040 0%,#222830 100%);border:2px solid "+border+";"+
+      "position:relative;padding:5px 3px;"+
+      "touch-action:none;user-select:none;-webkit-user-select:none;"+
+      "box-shadow:0 2px 8px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.06);";
     el.innerHTML=
-      '<div style="font-size:20px;line-height:1;pointer-events:none;filter:drop-shadow(0 2px 1px rgba(0,0,0,.45))">'+tr.type.icon+'</div>'+
-      '<div style="font-size:11px;color:#e8ebf0;margin-top:2px;font-weight:600;pointer-events:none">'+tr.type.name+'</div>'+
-      '<div style="font-size:9px;color:#8b93a7;margin-top:1px;text-align:center;line-height:1.2;padding:0 2px;pointer-events:none">'+tr.type.desc+'</div>'+
-      '<div style="width:22px;height:4px;border-radius:3px;margin-top:3px;background:'+border+';box-shadow:0 1px 2px rgba(0,0,0,.4);pointer-events:none"></div>';
+      '<div style="font-size:24px;line-height:1;pointer-events:none;filter:drop-shadow(0 2px 2px rgba(0,0,0,.5))">'+tr.type.icon+'</div>'+
+      '<div style="font-size:11px;color:#e8ebf0;margin-top:3px;font-weight:700;pointer-events:none">'+tr.type.name+'</div>'+
+      '<div style="font-size:9px;color:#8b93a7;margin-top:1px;text-align:center;line-height:1.2;padding:0 3px;pointer-events:none">'+tr.type.desc+'</div>'+
+      '<div style="width:26px;height:5px;border-radius:4px;margin-top:4px;background:'+border+';box-shadow:0 0 4px '+border+'80;pointer-events:none"></div>';
     trayEl.appendChild(el);
   });
 }
@@ -480,8 +482,13 @@ function update(dt){
     game.spawnAcc+=dt;
     if(game.spawnAcc>=spawnIntervalFor(game.level)){
       game.spawnAcc=0;
-      game.enemies.push(makeEnemy(game.level));
-      game.spawned++;
+      // 最小间距：新怪物必须和前一个拉开距离
+      const last=game.enemies.length?game.enemies[game.enemies.length-1]:null;
+      const ok=!last||Math.hypot(last.x-PATH[0].x,last.y-PATH[0].y)>28;
+      if(ok||game.enemies.length===0){
+        game.enemies.push(makeEnemy(game.level));
+        game.spawned++;
+      }
     }
   }
 
@@ -805,45 +812,92 @@ function draw(){
   try{
   ctx.setTransform(1,0,0,1,0,0);
   ctx.clearRect(0,0,CV_W,CV_H);
-  ctx.fillStyle="#1c2030";
-  ctx.fillRect(0,0,CV_W,CV_H);
 
-  // 路径
-  ctx.lineWidth=48; ctx.lineJoin="round"; ctx.lineCap="round";
-  ctx.strokeStyle="#2a3040";
+  // 地形背景（草地 + 随机草地纹理）
+  ctx.fillStyle="#1a2818";
+  ctx.fillRect(0,0,CV_W,CV_H);
+  // 草地深浅斑块
+  ctx.fillStyle="rgba(30,50,25,.6)";
+  for(let i=0;i<35;i++){
+    const gx=(i*137+43)%CV_W, gy=(i*211+71)%CV_H, gr=18+(i*7)%30;
+    ctx.beginPath(); ctx.arc(gx,gy,gr,0,Math.PI*2); ctx.fill();
+  }
+  ctx.fillStyle="rgba(40,65,30,.4)";
+  for(let i=0;i<25;i++){
+    const gx=(i*193+29)%CV_W, gy=(i*157+53)%CV_H, gr=12+(i*11)%22;
+    ctx.beginPath(); ctx.arc(gx,gy,gr,0,Math.PI*2); ctx.fill();
+  }
+  // 细网格
+  ctx.strokeStyle="rgba(60,90,50,.12)"; ctx.lineWidth=1;
+  for(let gx=0;gx<CV_W;gx+=48){ ctx.beginPath(); ctx.moveTo(gx,0); ctx.lineTo(gx,CV_H); ctx.stroke(); }
+  for(let gy=0;gy<CV_H;gy+=48){ ctx.beginPath(); ctx.moveTo(0,gy); ctx.lineTo(CV_W,gy); ctx.stroke(); }
+
+  // 路径（四层：路基 → 砂石肩 → 路面 → 中线）
+  ctx.lineWidth=72; ctx.lineJoin="round"; ctx.lineCap="round";
+  ctx.strokeStyle="#141a0e";
   ctx.beginPath(); ctx.moveTo(PATH[0].x,PATH[0].y);
   for(let i=1;i<PATH.length;i++) ctx.lineTo(PATH[i].x,PATH[i].y);
   ctx.stroke();
-  ctx.lineWidth=36; ctx.strokeStyle="#333b4f"; ctx.stroke();
+  ctx.lineWidth=60; ctx.strokeStyle="#3a4228"; ctx.stroke();
+  ctx.lineWidth=50; ctx.strokeStyle="#4a5238"; ctx.stroke();
+  ctx.lineWidth=40; ctx.strokeStyle="#555d42"; ctx.stroke();
+  // 路中虚线
+  ctx.lineWidth=2; ctx.strokeStyle="rgba(200,210,180,.22)"; ctx.setLineDash([14,11]);
+  ctx.beginPath(); ctx.moveTo(PATH[0].x,PATH[0].y);
+  for(let i=1;i<PATH.length;i++) ctx.lineTo(PATH[i].x,PATH[i].y);
+  ctx.stroke();
+  ctx.setLineDash([]);
 
   drawCave(PATH[0].x, PATH[0].y);
 
   for(const s of SLOTS){
     if(!s.troop){
-      ctx.strokeStyle="rgba(120,130,160,.22)";
-      ctx.lineWidth=2; ctx.setLineDash([5,5]);
-      ctx.strokeRect(s.x-26,s.y-26,52,52);
-      ctx.setLineDash([]);
+      // 军事部署区：四角方括号 + 半透明底色
+      const sz=22;
+      ctx.strokeStyle="rgba(120,160,100,.4)"; ctx.lineWidth=2; ctx.lineCap="butt";
+      // 左上
+      ctx.beginPath(); ctx.moveTo(s.x-sz,s.y-sz+8); ctx.lineTo(s.x-sz,s.y-sz); ctx.lineTo(s.x-sz+8,s.y-sz); ctx.stroke();
+      // 右上
+      ctx.beginPath(); ctx.moveTo(s.x+sz-8,s.y-sz); ctx.lineTo(s.x+sz,s.y-sz); ctx.lineTo(s.x+sz,s.y-sz+8); ctx.stroke();
+      // 左下
+      ctx.beginPath(); ctx.moveTo(s.x-sz,s.y+sz-8); ctx.lineTo(s.x-sz,s.y+sz); ctx.lineTo(s.x-sz+8,s.y+sz); ctx.stroke();
+      // 右下
+      ctx.beginPath(); ctx.moveTo(s.x+sz-8,s.y+sz); ctx.lineTo(s.x+sz,s.y+sz); ctx.lineTo(s.x+sz,s.y+sz-8); ctx.stroke();
+      // 十字准心
+      ctx.strokeStyle="rgba(120,160,100,.2)"; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(s.x-6,s.y); ctx.lineTo(s.x+6,s.y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s.x,s.y-6); ctx.lineTo(s.x,s.y+6); ctx.stroke();
     }
   }
 
   drawCrystals();
 
-  // 毒云
+  // 毒云（发光雾气）
   for(const c of game.clouds){
-    const a=Math.min(0.35, c.life*0.12);
-    ctx.beginPath(); ctx.arc(c.x,c.y,c.r,0,Math.PI*2);
-    ctx.fillStyle=`rgba(132,204,22,${a})`; ctx.fill();
-    ctx.strokeStyle=`rgba(163,230,53,${a+0.2})`; ctx.lineWidth=1.5; ctx.stroke();
+    const a=Math.min(0.4, c.life*0.13);
+    const grd=ctx.createRadialGradient(c.x,c.y,0,c.x,c.y,c.r);
+    grd.addColorStop(0,`rgba(132,204,22,${a*0.8})`);
+    grd.addColorStop(0.6,`rgba(132,204,22,${a*0.3})`);
+    grd.addColorStop(1,"transparent");
+    ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(c.x,c.y,c.r,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle=`rgba(163,230,53,${a+0.15})`; ctx.lineWidth=1.5; ctx.stroke();
   }
 
-  // 特效
+  // 特效（发光环 + 激光 + 锥形）
   for(const ef of game.effects){
     const a=Math.max(0,ef.life/ef.max);
     if(ef.kind==="ring"){
-      ctx.beginPath(); ctx.arc(ef.x,ef.y,ef.r*(1.05-a*0.2),0,Math.PI*2);
+      // 外层光晕
+      ctx.beginPath(); ctx.arc(ef.x,ef.y,ef.r*(1.05-a*0.15),0,Math.PI*2);
+      ctx.strokeStyle=hexA(ef.color,a*0.4); ctx.lineWidth=6; ctx.stroke();
+      // 主环
+      ctx.beginPath(); ctx.arc(ef.x,ef.y,ef.r*(1.05-a*0.15),0,Math.PI*2);
       ctx.strokeStyle=hexA(ef.color,a*0.8); ctx.lineWidth=2; ctx.stroke();
     } else if(ef.kind==="laser"){
+      // 外层光晕
+      ctx.beginPath(); ctx.moveTo(ef.x1,ef.y1); ctx.lineTo(ef.x2,ef.y2);
+      ctx.strokeStyle=hexA(ef.color,a*0.3); ctx.lineWidth=(ef.width||2)+4; ctx.stroke();
+      // 主线
       ctx.beginPath(); ctx.moveTo(ef.x1,ef.y1); ctx.lineTo(ef.x2,ef.y2);
       ctx.strokeStyle=hexA(ef.color,a); ctx.lineWidth=ef.width||2; ctx.stroke();
     } else if(ef.kind==="cone"){
@@ -851,18 +905,23 @@ function draw(){
       ctx.moveTo(ef.x,ef.y);
       ctx.arc(ef.x,ef.y,ef.r,ef.ang-ef.half,ef.ang+ef.half);
       ctx.closePath();
-      ctx.fillStyle=`rgba(251,146,60,${a*0.35})`; ctx.fill();
-      ctx.strokeStyle=`rgba(251,146,60,${a*0.7})`; ctx.lineWidth=1; ctx.stroke();
+      ctx.fillStyle=`rgba(251,146,60,${a*0.4})`; ctx.fill();
+      ctx.strokeStyle=`rgba(251,146,60,${a*0.8})`; ctx.lineWidth=1.5; ctx.stroke();
     }
   }
 
-  // 持续激光
+  // 持续激光（发光 + 光晕）
   for(const b of game.beams){
     const a=Math.min(1,b.life*3);
+    // 外层光晕
+    ctx.beginPath(); ctx.moveTo(b.x,b.y); ctx.lineTo(b.tx,b.ty);
+    ctx.strokeStyle=`rgba(79,209,255,${a*0.3})`; ctx.lineWidth=8; ctx.stroke();
+    // 主光束
     ctx.beginPath(); ctx.moveTo(b.x,b.y); ctx.lineTo(b.tx,b.ty);
     ctx.strokeStyle=`rgba(79,209,255,${a*0.9})`; ctx.lineWidth=3; ctx.stroke();
+    // 内核白线
     ctx.beginPath(); ctx.moveTo(b.x,b.y); ctx.lineTo(b.tx,b.ty);
-    ctx.strokeStyle=`rgba(255,255,255,${a*0.5})`; ctx.lineWidth=1; ctx.stroke();
+    ctx.strokeStyle=`rgba(255,255,255,${a*0.6})`; ctx.lineWidth=1; ctx.stroke();
   }
 
   // 兵（更小底座 + 阴影立体感 + 等级色环 + 名字）
@@ -871,39 +930,41 @@ function draw(){
     drawTroopAt(s.x, s.y, tr, 1);
   }
 
-  // 悬停描述气泡（名字 + 打法 + 描述）
+  // 悬停描述气泡（军事风格）
   if(hoverSlot && hoverSlot.troop){
     const tr=hoverSlot.troop;
     const s=hoverSlot;
     const title=tr.type.name+" · "+tr.type.tag;
     const desc=tr.type.desc;
-    const sub="等级光环 · 同级可合成";
+    const sub="Lv."+tr.level+" · 同级可合成";
     ctx.font="bold 12px \"Microsoft YaHei\",sans-serif";
     const w1=ctx.measureText(title).width;
     ctx.font="11px \"Microsoft YaHei\",sans-serif";
     const w2=ctx.measureText(desc).width;
     const w3=ctx.measureText(sub).width;
-    const bw=Math.max(w1,w2,w3)+20;
-    const bh=58;
-    let bx=s.x-bw/2, by=s.y-78;
-    if(bx<6) bx=6;
-    if(bx+bw>CV_W-6) bx=CV_W-6-bw;
-    if(by<6) by=s.y+48;
-    ctx.fillStyle="rgba(15,18,28,.94)";
-    ctx.strokeStyle=LEVEL_COLORS[tr.level-1];
-    ctx.lineWidth=2;
+    const bw=Math.max(w1,w2,w3)+24;
+    const bh=62;
+    let bx=s.x-bw/2, by=s.y-82;
+    if(bx<8) bx=8;
+    if(bx+bw>CV_W-8) bx=CV_W-8-bw;
+    if(by<8) by=s.y+52;
+    // 背景
     roundRect(bx,by,bw,bh,8);
-    ctx.fill(); ctx.stroke();
+    ctx.fillStyle="rgba(12,18,10,.95)"; ctx.fill();
+    ctx.strokeStyle=LEVEL_COLORS[tr.level-1]; ctx.lineWidth=2; ctx.stroke();
+    // 顶部等级线
+    ctx.fillStyle=LEVEL_COLORS[tr.level-1];
+    ctx.fillRect(bx+8,by,bw-16,2);
     ctx.textAlign="center"; ctx.textBaseline="middle";
     ctx.font="bold 12px \"Microsoft YaHei\",sans-serif";
-    ctx.fillStyle="#e8ebf0";
-    ctx.fillText(title, bx+bw/2, by+14);
+    ctx.fillStyle="#e8f0e0";
+    ctx.fillText(title, bx+bw/2, by+16);
     ctx.font="11px \"Microsoft YaHei\",sans-serif";
-    ctx.fillStyle="#b6bccb";
-    ctx.fillText(desc, bx+bw/2, by+32);
+    ctx.fillStyle="#b6ccb0";
+    ctx.fillText(desc, bx+bw/2, by+34);
     ctx.font="10px sans-serif";
-    ctx.fillStyle="#8b93a7";
-    ctx.fillText(sub, bx+bw/2, by+46);
+    ctx.fillStyle="#7a8a68";
+    ctx.fillText(sub, bx+bw/2, by+50);
   }
 
   // 妖怪（更小 + 阴影立体感，沿路径走动）
@@ -917,20 +978,28 @@ function draw(){
       ctx.beginPath(); ctx.arc(e.x,e.y-2,(e.bodyR||11)+4,0,Math.PI*2);
       ctx.strokeStyle="rgba(132,204,22,.7)"; ctx.lineWidth=2; ctx.stroke();
     }
-    const w=26,h=3,p=Math.max(0,e.hp/e.hpMax);
-    const barY=e.y-(e.bodyR||11)-12;
+    const w=32,h=4,p=Math.max(0,e.hp/e.hpMax);
+    const barY=e.y-(e.bodyR||11)-14;
     ctx.fillStyle="#111"; ctx.fillRect(e.x-w/2,barY,w,h);
     ctx.fillStyle=p>0.5?"#7ee787":p>0.25?"#fbbf24":"#f43f5e";
     ctx.fillRect(e.x-w/2,barY,w*p,h);
+    ctx.strokeStyle="rgba(0,0,0,.5)"; ctx.lineWidth=1; ctx.strokeRect(e.x-w/2,barY,w,h);
   }
 
-  // 子弹
+  // 子弹（发光拖尾）
   for(const b of game.bullets){
-    ctx.globalAlpha=Math.max(0.25,b.life/b.maxLife);
+    const a=Math.max(0.3,b.life/b.maxLife);
+    ctx.globalAlpha=a;
+    // 拖尾光晕
+    const glow=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,b.size*3);
+    glow.addColorStop(0,b.color); glow.addColorStop(1,"transparent");
+    ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(b.x,b.y,b.size*3,0,Math.PI*2); ctx.fill();
+    // 弹道线
     ctx.beginPath(); ctx.moveTo(b.sx,b.sy); ctx.lineTo(b.x,b.y);
     ctx.strokeStyle=b.color; ctx.lineWidth=1.5; ctx.stroke();
+    // 弹头
     ctx.beginPath(); ctx.arc(b.x,b.y,b.size||3,0,Math.PI*2);
-    ctx.fillStyle=b.color; ctx.fill();
+    ctx.fillStyle="#fff"; ctx.fill();
   }
   ctx.globalAlpha=1;
 
@@ -959,6 +1028,10 @@ function draw(){
     console.error("draw error", err);
     try{ ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle="#1c2030"; ctx.fillRect(0,0,CV_W,CV_H); }catch(_){}
   }
+  // 暗角（vignette）
+  const vg=ctx.createRadialGradient(CV_W/2,CV_H/2,CV_W*0.32,CV_W/2,CV_H/2,CV_W*0.72);
+  vg.addColorStop(0,"transparent"); vg.addColorStop(1,"rgba(0,0,0,.35)");
+  ctx.fillStyle=vg; ctx.fillRect(0,0,CV_W,CV_H);
 }
 
 function hexA(hex,a){
@@ -987,8 +1060,17 @@ function drawTroopAt(x, y, tr, alpha){
     ctx.fillStyle = mode==="aoe" ? "rgba(251,146,60,.045)" : "rgba(79,209,255,.035)";
     ctx.fill();
   }
+  // 等级光环
+  if(lv>0){
+    const glowPulse=0.5+Math.sin(t*3+lv)*0.3;
+    const glowR=14+lv*2;
+    const grd=ctx.createRadialGradient(x,y+4,4,x,y+4,glowR);
+    grd.addColorStop(0,`rgba(${lv>=4?255:100},${lv>=4?100:200},255,${0.12*glowPulse*lv})`);
+    grd.addColorStop(1,"transparent");
+    ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(x,y+4,glowR,0,Math.PI*2); ctx.fill();
+  }
   ctx.save();
-  ctx.translate(x,y); ctx.scale(1.3*(device.drawScale||1),1.3*(device.drawScale||1)); ctx.translate(-x,-y);
+  ctx.translate(x,y); ctx.scale(1.5*(device.drawScale||1),1.5*(device.drawScale||1)); ctx.translate(-x,-y);
   ctx.beginPath(); ctx.ellipse(x, y+12, 12, 4.5, 0, 0, Math.PI*2);
   ctx.fillStyle="rgba(0,0,0,.4)"; ctx.fill();
   ctx.beginPath(); ctx.arc(x, y+9, 10.5, 0, Math.PI*2);
@@ -1141,10 +1223,13 @@ function drawTroopAt(x, y, tr, alpha){
 
   ctx.restore();
   if(name){
-    ctx.font='bold 10px "Microsoft YaHei",sans-serif';
+    ctx.font='bold 11px "Microsoft YaHei",sans-serif';
     ctx.textAlign="center"; ctx.textBaseline="middle";
-    ctx.fillStyle="#e8ebf0";
-    ctx.fillText(name, x, y+27);
+    const tw=ctx.measureText(name).width;
+    roundRect(x-tw/2-4, y+20, tw+8, 16, 4);
+    ctx.fillStyle="rgba(15,20,12,.7)"; ctx.fill();
+    ctx.fillStyle="#e8f0e0";
+    ctx.fillText(name, x, y+28);
   }
   ctx.restore();
 }
@@ -1159,7 +1244,7 @@ function drawEnemyAt(e){
   const eye = e.eye || "#c4f042";
   const wob = Math.sin((e.walk||0)) * 0.18;
   ctx.save();
-  ctx.translate(x,y); ctx.scale(1.15*(device.drawScale||1),1.15*(device.drawScale||1)); ctx.translate(-x,-y);
+  ctx.translate(x,y); ctx.scale(1.35*(device.drawScale||1),1.35*(device.drawScale||1)); ctx.translate(-x,-y);
   // 阴影
   ctx.beginPath(); ctx.ellipse(x, y+r*0.55, r*0.95, r*0.32, 0, 0, Math.PI*2);
   ctx.fillStyle="rgba(0,0,0,.4)"; ctx.fill();
@@ -1284,32 +1369,52 @@ function shadeColor(col, pct){
 }
 
 function drawCave(x,y){
-  ctx.beginPath();
-  ctx.ellipse(x,y,28,34,0,0,Math.PI*2);
-  ctx.fillStyle="#0d0f16"; ctx.fill();
-  ctx.strokeStyle="#4a5568"; ctx.lineWidth=3; ctx.stroke();
-  ctx.beginPath();
-  ctx.ellipse(x,y,16,20,0,0,Math.PI*2);
-  ctx.fillStyle="#05060a"; ctx.fill();
-  ctx.font="11px sans-serif"; ctx.fillStyle="#8b93a7";
-  ctx.textAlign="center"; ctx.fillText("洞口", x, y+48);
+  // 军事掩体入口
+  ctx.beginPath(); ctx.ellipse(x,y+6,36,22,0,0,Math.PI*2);
+  ctx.fillStyle="#0a0e08"; ctx.fill();
+  ctx.strokeStyle="#5a6a50"; ctx.lineWidth=4; ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(x,y,30,28,0,0,Math.PI*2);
+  ctx.fillStyle="#0d1108"; ctx.fill();
+  ctx.strokeStyle="#6a7a58"; ctx.lineWidth=3; ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(x,y,18,18,0,0,Math.PI*2);
+  ctx.fillStyle="#050804"; ctx.fill();
+  // 掩体上方钢梁
+  ctx.strokeStyle="#4a5a40"; ctx.lineWidth=3; ctx.lineCap="butt";
+  ctx.beginPath(); ctx.moveTo(x-32,y-16); ctx.lineTo(x+32,y-16); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x-28,y-20); ctx.lineTo(x+28,y-20); ctx.stroke();
+  // 入口灯光
+  const ga=ctx.createRadialGradient(x,y,0,x,y,30);
+  ga.addColorStop(0,"rgba(120,180,80,.12)"); ga.addColorStop(1,"transparent");
+  ctx.fillStyle=ga; ctx.fillRect(x-32,y-28,64,56);
+  ctx.font="bold 10px sans-serif"; ctx.fillStyle="#7a8a68";
+  ctx.textAlign="center"; ctx.fillText("洞口", x, y+36);
 }
 
 function drawCrystals(){
   const end=PATH[PATH.length-1];
+  const t=(typeof performance!=="undefined" ? performance.now() : 0)/1000;
   for(let i=0;i<START_CRYSTALS;i++){
     const cx=end.x-90+(i%5)*40;
     const cy=end.y-14+((i/5)|0)*30;
     const alive=i<game.crystals;
+    const pulse=alive?0.6+Math.sin(t*2.5+i*0.8)*0.4:0;
+    // 发光
+    if(alive){
+      const grd=ctx.createRadialGradient(cx,cy,2,cx,cy,18);
+      grd.addColorStop(0,`rgba(79,209,255,${0.25*pulse})`);
+      grd.addColorStop(1,"transparent");
+      ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(cx,cy,18,0,Math.PI*2); ctx.fill();
+    }
+    // 水晶体
     ctx.beginPath();
-    ctx.moveTo(cx,cy-10); ctx.lineTo(cx+8,cy); ctx.lineTo(cx,cy+10); ctx.lineTo(cx-8,cy);
+    ctx.moveTo(cx,cy-12); ctx.lineTo(cx+9,cy); ctx.lineTo(cx,cy+12); ctx.lineTo(cx-9,cy);
     ctx.closePath();
-    ctx.fillStyle=alive?"#4fd1ff":"#2b3140";
+    ctx.fillStyle=alive?`rgba(79,209,255,${0.7+pulse*0.3})`:"#1a2820";
     ctx.fill();
-    if(alive){ ctx.strokeStyle="#bff0ff"; ctx.lineWidth=1.5; ctx.stroke(); }
+    if(alive){ ctx.strokeStyle=`rgba(200,240,255,${0.5+pulse*0.5})`; ctx.lineWidth=1.5; ctx.stroke(); }
   }
-  ctx.font="11px sans-serif"; ctx.fillStyle="#8b93a7";
-  ctx.textAlign="left"; ctx.fillText("水晶", end.x-90, end.y+40);
+  ctx.font="11px sans-serif"; ctx.fillStyle="#7a8a68";
+  ctx.textAlign="right"; ctx.fillText("水晶", end.x-100, end.y+10);
 }
 
 // ============ 拖拽合成（鼠标 + 手机手指统一用 Pointer） ============

@@ -19,6 +19,7 @@ function roomView(room,viewerId){
     roomCode:room.code,
     inviteToken:room.token,
     hostId:room.hostId,
+    gameMode:room.gameMode||"coop",
     players:[...room.players.values()].map(p=>({id:p.id,name:p.name,ready:!!p.ready,connected:!!p.connected})),
     state:room.session ? publicState(room.session,viewerId) : null
   };
@@ -39,7 +40,7 @@ function attachTransport(server){
   }
   function ensureSession(room){
     if(!room.session){
-      room.session=createSession([...room.players.keys()]);
+      room.session=createSession([...room.players.keys()], Date.now()>>>0, room.gameMode||"coop");
       // keep host id aligned with room host
       room.session.hostId = room.hostId;
       // sync names
@@ -69,6 +70,8 @@ function attachTransport(server){
           if(room) throw new Error("已经在房间里");
           player.name=String(msg.name||player.name).trim().slice(0,20)||player.name;
           room=rooms.create(player);
+          // 设置游戏模式
+          if(msg.mode==="independent") room.gameMode="independent";
           ensureSession(room);
           updateRoom(room); sendState(room); return;
         }
@@ -80,7 +83,7 @@ function attachTransport(server){
           rooms.add(room,player);
           // recreate session when roster changes before start
           if(!room.session || !room.session.started){
-            room.session=createSession([...room.players.keys()]);
+            room.session=createSession([...room.players.keys()], Date.now()>>>0, room.gameMode||"coop");
             room.session.hostId=room.hostId;
             for(const p of room.players.values()){
               const sp=room.session.players.find(x=>x.id===p.id);
@@ -123,7 +126,7 @@ function attachTransport(server){
         }
         if(msg.type==="rematch"){
           if(room.hostId!==player.id) throw new Error("只有房主可以重新开始");
-          room.session=createSession([...room.players.keys()]);
+          room.session=createSession([...room.players.keys()], Date.now()>>>0, room.gameMode||"coop");
           room.session.hostId=room.hostId;
           for(const p of room.players.values()){
             p.ready=false;
@@ -138,7 +141,7 @@ function attachTransport(server){
             rooms.remove(r,player.id);
             if(r.players.size>0){
               if(r.session && !r.session.started){
-                r.session=createSession([...r.players.keys()]);
+                r.session=createSession([...r.players.keys()], Date.now()>>>0, r.gameMode||"coop");
                 r.session.hostId=r.hostId;
               }
               updateRoom(r);
@@ -165,7 +168,7 @@ function attachTransport(server){
           rooms.remove(room,player.id);
           if(room.players.size>0){
             if(room.session && !room.session.started){
-              room.session=createSession([...room.players.keys()]);
+              room.session=createSession([...room.players.keys()], Date.now()>>>0, room.gameMode||"coop");
               room.session.hostId=room.hostId;
             }
             updateRoom(room);

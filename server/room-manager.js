@@ -18,6 +18,7 @@ function createRoom(){
     players: new Map(),
     hostId: null,
     session: null,
+    gameMode: "coop", // "coop" | "independent"
     createdAt: Date.now(),
     touchedAt: Date.now(),
   };

@@ -7,19 +7,63 @@ const PREP_SECONDS = 120;
 const START_TROOPS = 5;
 const TROOPS_PER_STAGE = 2;
 const MAX_LEVEL = 6;
-const SLOT_COUNT = 32;
 const CELL = 64;
 
-// 与单机 index.html 一致的 S 形路径
+// ============ 原始单路径（合作模式 / 单机） ============
 const PATH = [
   {x: 40, y:70}, {x:860, y:70},
   {x:860, y:180}, {x:100, y:180},
   {x:100, y:290}, {x:860, y:290},
   {x:860, y:400}, {x:100, y:400},
-  {x:100, y:510}, {x:520, y:510}
+  {x:100, y:520}, {x:520, y:520}
 ];
 
-// style 决定打法；数值用 baseStats(level) * mul 生成
+// ============ 三条独立路径（独立路径模式） ============
+// 画布尺寸 960x576，三条路径分上/中/下三个条带
+const INDEPENDENT_PATHS = [
+  // 路径0：顶部条带 (y: 40~165)
+  [
+    {x: 30, y: 55}, {x:860, y: 55},
+    {x:860, y:105}, {x:100, y:105},
+    {x:100, y:155}, {x:860, y:155},
+  ],
+  // 路径1：中部条带 (y: 200~325)
+  [
+    {x: 30, y:215}, {x:860, y:215},
+    {x:860, y:265}, {x:100, y:265},
+    {x:100, y:315}, {x:860, y:315},
+  ],
+  // 路径2：底部条带 (y: 360~485)
+  [
+    {x: 30, y:375}, {x:860, y:375},
+    {x:860, y:425}, {x:100, y:425},
+    {x:100, y:475}, {x:860, y:475},
+  ],
+];
+
+// 每条独立路径的槽位（4排×4列 = 16个/路）
+function buildIndependentSlots(){
+  const bands = [
+    [{x:220,y:72},{x:340,y:72},{x:460,y:72},{x:580,y:72},
+     {x:220,y:102},{x:340,y:102},{x:460,y:102},{x:580,y:102},
+     {x:220,y:132},{x:340,y:132},{x:460,y:132},{x:580,y:132},
+     {x:220,y:162},{x:340,y:162},{x:460,y:162},{x:580,y:162}],
+    [{x:220,y:232},{x:340,y:232},{x:460,y:232},{x:580,y:232},
+     {x:220,y:262},{x:340,y:262},{x:460,y:262},{x:580,y:262},
+     {x:220,y:292},{x:340,y:292},{x:460,y:292},{x:580,y:292},
+     {x:220,y:322},{x:340,y:322},{x:460,y:322},{x:580,y:322}],
+    [{x:220,y:392},{x:340,y:392},{x:460,y:392},{x:580,y:392},
+     {x:220,y:422},{x:340,y:422},{x:460,y:422},{x:580,y:422},
+     {x:220,y:452},{x:340,y:452},{x:460,y:452},{x:580,y:452},
+     {x:220,y:482},{x:340,y:482},{x:460,y:482},{x:580,y:482}],
+  ];
+  return bands;
+}
+
+const INDEPENDENT_SLOT_META = buildIndependentSlots();
+const INDEPENDENT_SLOT_COUNT = 16; // 每条路径16个槽位
+
+// ============ 兵种定义 ============
 const TROOP_TYPES = [
   {key:"gun",      name:"机枪兵", icon:"🔫", style:"rapid",   mode:"single", tag:"连射", desc:"快速连射，单体小伤", rateMul:2.2, dmgMul:0.42, rangeMul:0.95, burst:3},
   {key:"tank",     name:"坦克",   icon:"🛡", style:"heavy",   mode:"single", tag:"重击", desc:"单发重创，攻速慢", rateMul:0.42, dmgMul:2.2,  rangeMul:1.0},
@@ -38,8 +82,9 @@ const TROOP_TYPES = [
   {key:"core",     name:"能量核", icon:"🔵", style:"pulse",   mode:"aoe",    tag:"脉冲", desc:"以自身为中心震波", rateMul:0.55, dmgMul:0.95, rangeMul:1.05},
 ];
 
+// ============ 原始单路径槽位（合作模式 / 单机） ============
 function buildSlots(){
-  const bandY = [125, 235, 345, 455];
+  const bandY = [115, 225, 335, 445];
   const startX = 150, gap = CELL + 6, cols = 8;
   const slots = [];
   bandY.forEach(y=>{
@@ -50,19 +95,22 @@ function buildSlots(){
 
 const SLOT_META = buildSlots();
 
-function pathLength(){
+// ============ 路径工具函数 ============
+function pathLength(path){
+  path = path || PATH;
   let len=0;
-  for(let i=0;i<PATH.length-1;i++){
-    len += Math.hypot(PATH[i+1].x-PATH[i].x, PATH[i+1].y-PATH[i].y);
+  for(let i=0;i<path.length-1;i++){
+    len += Math.hypot(path[i+1].x-path[i].x, path[i+1].y-path[i].y);
   }
   return len;
 }
 const PATH_LEN = pathLength();
 
-function posOnPath(dist){
+function posOnPath(dist, path){
+  path = path || PATH;
   let left = Math.max(0, dist);
-  for(let i=0;i<PATH.length-1;i++){
-    const a=PATH[i], b=PATH[i+1];
+  for(let i=0;i<path.length-1;i++){
+    const a=path[i], b=path[i+1];
     const seg=Math.hypot(b.x-a.x,b.y-a.y);
     if(left <= seg){
       const t = seg>0 ? left/seg : 0;
@@ -70,11 +118,25 @@ function posOnPath(dist){
     }
     left -= seg;
   }
-  const last=PATH[PATH.length-1];
-  return {x:last.x, y:last.y, seg:PATH.length-2, t:1};
+  const last=path[path.length-1];
+  return {x:last.x, y:last.y, seg:path.length-2, t:1};
+}
+
+// 获取独立模式下某条路径的信息
+function getIndependentPath(pathIndex){
+  return INDEPENDENT_PATHS[pathIndex] || INDEPENDENT_PATHS[0];
+}
+function getIndependentSlots(pathIndex){
+  return INDEPENDENT_SLOT_META[pathIndex] || INDEPENDENT_SLOT_META[0];
+}
+function getIndependentPathLen(pathIndex){
+  return pathLength(getIndependentPath(pathIndex));
 }
 
 module.exports = {
   TOTAL_LEVELS,WAVE_SIZE,START_CRYSTALS,PREP_SECONDS,START_TROOPS,
-  TROOPS_PER_STAGE,MAX_LEVEL,SLOT_COUNT,CELL,PATH,PATH_LEN,TROOP_TYPES,SLOT_META,posOnPath
+  TROOPS_PER_STAGE,MAX_LEVEL,SLOT_COUNT,CELL,
+  PATH,PATH_LEN,TROOP_TYPES,SLOT_META,posOnPath,pathLength,
+  INDEPENDENT_PATHS,INDEPENDENT_SLOT_META,INDEPENDENT_SLOT_COUNT,
+  getIndependentPath,getIndependentSlots,getIndependentPathLen
 };
