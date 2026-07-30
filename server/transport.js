@@ -27,8 +27,27 @@ function roomView(room,viewerId){
 
 function attachTransport(server){
   const rooms = new RoomManager();
-  const wss = new WebSocketServer({server});
+  const wss = new WebSocketServer({
+    server,
+    // 允许长连接（托管平台常常有代理空闲超时）
+    perMessageDeflate: false,
+    clientTracking: true,
+  });
   let nextPlayer=0;
+
+  // WebSocket 心跳：每 25s ping 一次，断开无响应的连接
+  // Railway / Cloudflare 等代理默认空闲 60~120s 会切断连接
+  const HEARTBEAT_MS = 25000;
+  function heartbeat(){
+    for(const room of rooms.roomsByCode.values()){
+      for(const p of room.players.values()){
+        if(p.ws && p.ws.readyState===p.ws.OPEN){
+          try{ p.ws.ping(); }catch(_){}
+        }
+      }
+    }
+  }
+  const hbTimer = setInterval(heartbeat, HEARTBEAT_MS);
 
   function makePlayer(ws,name){
     const id="p"+(++nextPlayer);
@@ -182,14 +201,21 @@ function attachTransport(server){
   });
 
   const interval=setInterval(()=>{
-    rooms.cleanup();
-    for(const room of rooms.roomsByCode.values()){
-      if(!room.session || !room.session.started || room.session.over) continue;
-      step(room.session,0.05);
-      sendState(room);
+    try{
+      rooms.cleanup();
+      for(const room of rooms.roomsByCode.values()){
+        if(!room.session || !room.session.started || room.session.over) continue;
+        step(room.session,0.05);
+        sendState(room);
+      }
+    }catch(e){
+      console.error("step loop error:", e.message);
     }
   },50);
-  wss.on("close",()=>clearInterval(interval));
+  wss.on("close",()=>{
+    clearInterval(interval);
+    clearInterval(hbTimer);
+  });
   return {wss,rooms};
 }
 

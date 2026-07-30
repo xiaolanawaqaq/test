@@ -616,6 +616,7 @@ function step(state, dt){
     const ps = {
       enemies: state.enemies, bullets: state.bullets, beams: state.beams,
       clouds: state.clouds, effects: state.effects,
+      slots: state.slots,
       spawned: state.spawned, killed: state.killed, spawnAcc: state.spawnAcc,
       crystals: state.crystals, path: PATH, pathLen: PATH_LEN,
       _nextId: state.nextId, _rng: state.rng, _slotMeta: SLOT_META,

@@ -178,17 +178,6 @@ const INDEP_SLOTS=[
   [{x:220,y:232},{x:340,y:232},{x:460,y:232},{x:580,y:232},{x:220,y:262},{x:340,y:262},{x:460,y:262},{x:580,y:262},{x:220,y:292},{x:340,y:292},{x:460,y:292},{x:580,y:292},{x:220,y:322},{x:340,y:322},{x:460,y:322},{x:580,y:322}],
   [{x:220,y:392},{x:340,y:392},{x:460,y:392},{x:580,y:392},{x:220,y:422},{x:340,y:422},{x:460,y:422},{x:580,y:422},{x:220,y:452},{x:340,y:452},{x:460,y:452},{x:580,y:452},{x:220,y:482},{x:340,y:482},{x:460,y:482},{x:580,y:482}],
 ];
-// 独立模式的3条路径和槽位
-const INDEP_PATHS=[
-  [{x:30,y:55},{x:860,y:55},{x:860,y:105},{x:100,y:105},{x:100,y:155},{x:860,y:155}],
-  [{x:30,y:215},{x:860,y:215},{x:860,y:265},{x:100,y:265},{x:100,y:315},{x:860,y:315}],
-  [{x:30,y:375},{x:860,y:375},{x:860,y:425},{x:100,y:425},{x:100,y:475},{x:860,y:475}],
-];
-const INDEP_SLOTS=[
-  [{x:220,y:72},{x:340,y:72},{x:460,y:72},{x:580,y:72},{x:220,y:102},{x:340,y:102},{x:460,y:102},{x:580,y:102},{x:220,y:132},{x:340,y:132},{x:460,y:132},{x:580,y:132},{x:220,y:162},{x:340,y:162},{x:460,y:162},{x:580,y:162}],
-  [{x:220,y:232},{x:340,y:232},{x:460,y:232},{x:580,y:232},{x:220,y:262},{x:340,y:262},{x:460,y:262},{x:580,y:262},{x:220,y:292},{x:340,y:292},{x:460,y:292},{x:580,y:292},{x:220,y:322},{x:340,y:322},{x:460,y:322},{x:580,y:322}],
-  [{x:220,y:392},{x:340,y:392},{x:460,y:392},{x:580,y:392},{x:220,y:422},{x:340,y:422},{x:460,y:422},{x:580,y:422},{x:220,y:452},{x:340,y:452},{x:460,y:452},{x:580,y:452},{x:220,y:482},{x:340,y:482},{x:460,y:482},{x:580,y:482}],
-];
 
 const canvas=document.getElementById("gameCanvas");
 const ctx=canvas.getContext("2d");
@@ -253,10 +242,17 @@ function copyText(text){
 
 const net=new NetworkClient({
   onStatus(s){
-    ui.conn.textContent = s==="connected"?"已连接服务器":(s==="connecting"?"连接中…":"离线");
-    ui.homeStatus.textContent = s==="connected"?"已连接，可以创建/加入房间":(s==="connecting"?"正在连接服务器…":"服务器未连接");
+    const waiting=s==="connecting" || s==="reconnecting";
+    ui.conn.textContent = s==="connected"?"已连接服务器":(waiting?"正在重连…":"离线");
+    ui.conn.style.color = s==="connected"?"#7ee787":(waiting?"#fbbf24":"#f43f5e");
+    ui.homeStatus.textContent = s==="connected"
+      ? "已连接，可以创建/加入房间"
+      : (waiting?"正在连接联机服务器，请稍候…":"联机服务器未连接");
   },
-  onError(msg){ showErr(room?"lobby":"home", msg); },
+  onError(msg){
+    const target=(location.protocol==="https:"?"wss://":"ws://")+location.host;
+    showErr(room?"lobby":"home", msg+"（"+target+"）");
+  },
   onMessage(msg){
     if(msg.type==="hello"){ me.id=msg.playerId; return; }
     if(msg.type==="error"){ showErr(room?"lobby":"home", msg.message); return; }
@@ -983,76 +979,6 @@ function tickSfxFromState(s){
     level:s.level||1, bullets:bl, crystals:s.crystals||0,
     tray:trayCount, ownSlots
   };
-}
-
-// ============ 迷你地图（独立模式） ============
-const miniMapCanvas=document.getElementById("miniMap");
-const mmCtx=miniMapCanvas?miniMapCanvas.getContext("2d"):null;
-const MM_W=160, MM_H=120, MM_PAD=8;
-const MM_SCALE_X=(MM_W-MM_PAD*2)/960;
-const MM_SCALE_Y=(MM_H-MM_PAD*2)/576;
-
-function drawMiniMap(){
-  if(!mmCtx || !state || gameMode!=="independent") return;
-  mmCtx.clearRect(0,0,MM_W,MM_H);
-  mmCtx.fillStyle="rgba(10,16,8,.9)";
-  mmCtx.fillRect(0,0,MM_W,MM_H);
-
-  // 画三条路径
-  const colors=["#4fd1ff","#7ee787","#fb923c"];
-  for(let p=0;p<3;p++){
-    const path=INDEP_PATHS[p];
-    const isMe=p===myPathIndex;
-    const isView=currentViewPath===p || (currentViewPath===-1 && isMe);
-    mmCtx.strokeStyle=isView?colors[p]:"rgba(120,140,100,.4)";
-    mmCtx.lineWidth=isMe?2:1;
-    mmCtx.beginPath();
-    mmCtx.moveTo(MM_PAD+path[0].x*MM_SCALE_X, MM_PAD+path[0].y*MM_SCALE_Y);
-    for(let i=1;i<path.length;i++){
-      mmCtx.lineTo(MM_PAD+path[i].x*MM_SCALE_X, MM_PAD+path[i].y*MM_SCALE_Y);
-    }
-    mmCtx.stroke();
-
-    // 玩家标签
-    const player=state.players.find(pl=>pl.pathIndex===p);
-    if(player){
-      mmCtx.font="bold 9px sans-serif";
-      mmCtx.fillStyle=isMe?"#e8f0e0":"#7a8a68";
-      mmCtx.textAlign="left";
-      mmCtx.fillText(player.name, MM_PAD+4, MM_PAD+p*38+12);
-    }
-  }
-
-  // 高亮当前查看的路径
-  if(currentViewPath>=0){
-    const path=INDEP_PATHS[currentViewPath];
-    mmCtx.strokeStyle=colors[currentViewPath];
-    mmCtx.lineWidth=2;
-    mmCtx.setLineDash([3,3]);
-    mmCtx.strokeRect(MM_PAD-2, MM_PAD-2, MM_W-MM_PAD*2+4, MM_H-MM_PAD*2+4);
-    mmCtx.setLineDash([]);
-  }
-}
-
-// 迷你地图点击切换视角
-if(miniMapCanvas){
-  miniMapCanvas.addEventListener("click", e=>{
-    const rect=miniMapCanvas.getBoundingClientRect();
-    const clickY=(e.clientY-rect.top)/rect.height*MM_H;
-    // 判断点击了哪条路径
-    for(let p=0;p<3;p++){
-      const bandTop=MM_PAD+p*38;
-      const bandBot=bandTop+36;
-      if(clickY>=bandTop && clickY<=bandBot){
-        if(currentViewPath===p){
-          currentViewPath=-1; // 点自己的路回到默认
-        } else {
-          currentViewPath=p;
-        }
-        return;
-      }
-    }
-  });
 }
 
 // ============ 迷你地图（独立模式） ============
