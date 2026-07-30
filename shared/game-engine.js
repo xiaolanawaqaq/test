@@ -695,6 +695,29 @@ function publicState(state, viewerId){
       }));
     }
 
+    base.pathViews = state.paths.map(ps=>({
+      pathIndex: ps.pathIndex,
+      ownerId: ps.ownerId,
+      crystals: ps.crystals,
+      spawned: ps.spawned,
+      killed: ps.killed,
+      slots: ps.slots.map(t=>t?serializeTroop(t):null),
+      enemies: ps.enemies.filter(e=>!e.dead).map(e=>({
+        id:e.id, hp:Math.max(0,e.hp), hpMax:e.hpMax,
+        x:e.x, y:e.y, color:e.color, shell:e.shell, eye:e.eye,
+        bodyR:e.bodyR||12, kind:e.kind||"mite", walk:e.walk||0,
+        slow:e.slowMul<1, poison:e.poisonTimer>0,
+      })),
+      bullets: ps.bullets.map(b=>({id:b.id, x:b.x, y:b.y, sx:b.sx, sy:b.sy, tx:b.tx, ty:b.ty, color:b.color, size:b.size, style:b.style})),
+      beams: ps.beams.map(b=>({id:b.id, x:b.x, y:b.y, tx:b.tx, ty:b.ty, color:b.color, life:b.life})),
+      clouds: ps.clouds.map(c=>({id:c.id, x:c.x, y:c.y, r:c.r, life:c.life})),
+      effects: ps.effects.map(ef=>({
+        id:ef.id, kind:ef.kind, x:ef.x, y:ef.y, r:ef.r,
+        x1:ef.x1, y1:ef.y1, x2:ef.x2, y2:ef.y2,
+        ang:ef.ang, half:ef.half, color:ef.color, life:ef.life, max:ef.max, width:ef.width,
+      })),
+    }));
+
     // 其他路径摘要（迷你地图用）
     base.otherPaths = state.paths.filter(ps=>ps.ownerId!==viewerId).map(ps=>({
       pathIndex: ps.pathIndex,

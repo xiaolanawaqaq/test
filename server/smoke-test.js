@@ -9,7 +9,7 @@ function wait(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
 async function main(){
   const server=http.createServer((req,res)=>{ res.writeHead(200); res.end("ok"); });
-  attachTransport(server);
+  const transport=attachTransport(server);
   await new Promise(r=>server.listen(0,"127.0.0.1",r));
   const {port}=server.address();
   const url=`ws://127.0.0.1:${port}`;
@@ -79,7 +79,8 @@ async function main(){
     trayB:b.state.tray.length
   });
   a.ws.close(); b.ws.close(); c.ws.close();
-  server.close();
+  transport.wss.close();
+  await new Promise(resolve=>server.close(resolve));
 }
 
 main().catch(e=>{ console.error("SMOKE FAIL", e); process.exit(1); });

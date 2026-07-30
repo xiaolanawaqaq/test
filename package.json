@@ -6,7 +6,7 @@
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
-    "check": "node --check server/index.js && node --check server/room-manager.js && node --check server/game-session.js && node --check server/transport.js && node --check shared/game-engine.js && node --check client/network-client.js && node --check server/smoke-test.js",
+    "check": "node --check server/index.js && node --check server/room-manager.js && node --check server/game-session.js && node --check server/transport.js && node --check shared/game-types.js && node --check shared/game-engine.js && node --check client/network-client.js && node --check server/geometry-test.js && node --check server/smoke-test.js && node server/geometry-test.js",
     "smoke": "node server/smoke-test.js"
   },
   "dependencies": {

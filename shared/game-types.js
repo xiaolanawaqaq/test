@@ -1,5 +1,6 @@
 "use strict";
 
+(function(){
 const TOTAL_LEVELS = 40;
 const WAVE_SIZE = 20;
 const START_CRYSTALS = 10;
@@ -7,58 +8,36 @@ const PREP_SECONDS = 120;
 const START_TROOPS = 5;
 const TROOPS_PER_STAGE = 2;
 const MAX_LEVEL = 6;
+const CANVAS_WIDTH = 576;
+const CANVAS_HEIGHT = 960;
 const SLOT_COUNT = 32;
 const CELL = 64;
 
-// ============ 原始单路径（合作模式 / 单机） ============
 const PATH = [
-  {x: 40, y:70}, {x:860, y:70},
-  {x:860, y:180}, {x:100, y:180},
-  {x:100, y:290}, {x:860, y:290},
-  {x:860, y:400}, {x:100, y:400},
-  {x:100, y:520}, {x:520, y:520}
+  {x:70,y:40}, {x:70,y:860},
+  {x:180,y:860}, {x:180,y:100},
+  {x:290,y:100}, {x:290,y:860},
+  {x:400,y:860}, {x:400,y:100},
+  {x:520,y:100}, {x:520,y:520},
 ];
 
-// ============ 三条独立路径（独立路径模式） ============
-// 画布尺寸 960x576，三条路径分上/中/下三个条带
-const INDEPENDENT_PATHS = [
-  // 路径0：顶部条带 (y: 40~165)
-  [
-    {x: 30, y: 55}, {x:860, y: 55},
-    {x:860, y:105}, {x:100, y:105},
-    {x:100, y:155}, {x:860, y:155},
-  ],
-  // 路径1：中部条带 (y: 200~325)
-  [
-    {x: 30, y:215}, {x:860, y:215},
-    {x:860, y:265}, {x:100, y:265},
-    {x:100, y:315}, {x:860, y:315},
-  ],
-  // 路径2：底部条带 (y: 360~485)
-  [
-    {x: 30, y:375}, {x:860, y:375},
-    {x:860, y:425}, {x:100, y:425},
-    {x:100, y:475}, {x:860, y:475},
-  ],
+const INDEPENDENT_PATH = [
+  {x:80,y:60}, {x:80,y:850},
+  {x:288,y:850}, {x:288,y:100},
+  {x:496,y:100}, {x:496,y:710},
 ];
+const INDEPENDENT_PATHS = Array.from({length:3},()=>
+  INDEPENDENT_PATH.map(point=>({...point}))
+);
 
-// 每条独立路径的槽位（4排×4列 = 16个/路）
 function buildIndependentSlots(){
-  const bands = [
-    [{x:220,y:72},{x:340,y:72},{x:460,y:72},{x:580,y:72},
-     {x:220,y:102},{x:340,y:102},{x:460,y:102},{x:580,y:102},
-     {x:220,y:132},{x:340,y:132},{x:460,y:132},{x:580,y:132},
-     {x:220,y:162},{x:340,y:162},{x:460,y:162},{x:580,y:162}],
-    [{x:220,y:232},{x:340,y:232},{x:460,y:232},{x:580,y:232},
-     {x:220,y:262},{x:340,y:262},{x:460,y:262},{x:580,y:262},
-     {x:220,y:292},{x:340,y:292},{x:460,y:292},{x:580,y:292},
-     {x:220,y:322},{x:340,y:322},{x:460,y:322},{x:580,y:322}],
-    [{x:220,y:392},{x:340,y:392},{x:460,y:392},{x:580,y:392},
-     {x:220,y:422},{x:340,y:422},{x:460,y:422},{x:580,y:422},
-     {x:220,y:452},{x:340,y:452},{x:460,y:452},{x:580,y:452},
-     {x:220,y:482},{x:340,y:482},{x:460,y:482},{x:580,y:482}],
-  ];
-  return bands;
+  const xs=[144,240,336,432];
+  const ys=[220,400,580,760];
+  const slots=[];
+  for(const y of ys){
+    for(const x of xs) slots.push({x,y});
+  }
+  return Array.from({length:3},()=>slots.map(slot=>({...slot})));
 }
 
 const INDEPENDENT_SLOT_META = buildIndependentSlots();
@@ -83,14 +62,13 @@ const TROOP_TYPES = [
   {key:"core",     name:"能量核", icon:"🔵", style:"pulse",   mode:"aoe",    tag:"脉冲", desc:"以自身为中心震波", rateMul:0.55, dmgMul:0.95, rangeMul:1.05},
 ];
 
-// ============ 原始单路径槽位（合作模式 / 单机） ============
 function buildSlots(){
-  const bandY = [115, 225, 335, 445];
-  const startX = 150, gap = CELL + 6, cols = 8;
-  const slots = [];
-  bandY.forEach(y=>{
-    for(let c=0;c<cols;c++) slots.push({x:startX + c*gap, y});
-  });
+  const xs=[115,225,335,445];
+  const ys=[150,220,290,360,430,500,570,640];
+  const slots=[];
+  for(const y of ys){
+    for(const x of xs) slots.push({x,y});
+  }
   return slots;
 }
 
@@ -134,10 +112,14 @@ function getIndependentPathLen(pathIndex){
   return pathLength(getIndependentPath(pathIndex));
 }
 
-module.exports = {
+const GameTypes = {
   TOTAL_LEVELS,WAVE_SIZE,START_CRYSTALS,PREP_SECONDS,START_TROOPS,
-  TROOPS_PER_STAGE,MAX_LEVEL,SLOT_COUNT,CELL,
+  TROOPS_PER_STAGE,MAX_LEVEL,CANVAS_WIDTH,CANVAS_HEIGHT,SLOT_COUNT,CELL,
   PATH,PATH_LEN,TROOP_TYPES,SLOT_META,posOnPath,pathLength,
   INDEPENDENT_PATHS,INDEPENDENT_SLOT_META,INDEPENDENT_SLOT_COUNT,
   getIndependentPath,getIndependentSlots,getIndependentPathLen
 };
+
+if(typeof module!=="undefined" && module.exports) module.exports=GameTypes;
+if(typeof window!=="undefined") window.GameTypes=GameTypes;
+})();

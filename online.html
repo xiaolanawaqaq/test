@@ -28,17 +28,19 @@
   .codeBox{background:#12151c;border-radius:10px;padding:12px;margin-top:10px}
   .codeBox strong{font-size:24px;letter-spacing:3px;color:#7ee787}
   .link{font-size:12px;word-break:break-all;color:#b6bccb;margin-top:6px}
-  #stage{display:none;flex-direction:column;width:min(960px,100%);height:100%;margin:0 auto}
+  #stage{display:none;flex-direction:column;width:min(576px,100%);height:100%;margin:0 auto}
   #stage.active{display:flex}
-  #hud{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 10px;background:#1a2018;border-bottom:2px solid #3a4a30}
-  #hud .stat{display:flex;gap:4px;align-items:center;white-space:nowrap}
-  #hud .lbl{color:#7a8a68;font-size:11px}
-  #hud .val{font-weight:700}
-  #playersBar{width:100%;display:flex;gap:6px;flex-wrap:wrap}
-  #playersBar .chip{background:#12151c;border-radius:999px;padding:4px 10px;font-size:12px}
-  #canvasBox{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;background:#0a1008}
-  canvas{width:100%;height:auto;max-height:100%;background:#1a2018;touch-action:none;display:block}
-  #tray{min-height:96px;max-height:28vh;background:#1a2018;border-top:2px solid #3a4a30;display:flex;align-items:center;padding:6px 10px;gap:8px}
+  #hud{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;padding:5px 8px;background:#1a2018;border-bottom:2px solid #3a4a30;font-size:12px}
+  #hud .stat{display:flex;gap:3px;align-items:center;white-space:nowrap}
+  #hud .lbl{color:#7a8a68;font-size:10px}
+  #hud .val{font-weight:700;font-size:12px}
+  #hud button{min-height:32px;padding:5px 9px;font-size:11px}
+  #playersBar{width:100%;display:flex;gap:4px;flex-wrap:wrap}
+  #playersBar .chip{background:#12151c;border-radius:999px;padding:2px 7px;font-size:10px}
+  #canvasBox{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center;background:#0a1008;overflow:hidden}
+  #gameCanvas{width:auto;height:auto;max-width:100%;max-height:100%;aspect-ratio:3/5;background:#1a2018;touch-action:none;display:block}
+  #miniMap{position:absolute;top:8px;right:8px;width:120px;height:90px;border-radius:8px;border:1px solid rgba(120,160,100,.5);background:rgba(10,16,8,.85);cursor:pointer;display:none;z-index:10}
+  #tray{height:100px;min-height:88px;max-height:16vh;background:#1a2018;border-top:2px solid #3a4a30;display:flex;align-items:center;padding:5px 8px;gap:6px}
   #tray .title{color:#7a8a68;font-size:11px;writing-mode:vertical-lr}
   #trayItems{display:flex;gap:8px;overflow-x:auto;flex:1;align-items:center;touch-action:pan-x}
   .trayTroop{width:82px;min-height:88px;border-radius:12px;background:linear-gradient(180deg,#2a3040,#222830);border:2px solid #7ee787;display:flex;flex-direction:column;align-items:center;justify-content:center;touch-action:none;padding:5px;flex:0 0 auto;box-shadow:0 2px 8px rgba(0,0,0,.35)}
@@ -48,12 +50,11 @@
   #msg p{color:#b6bccb;margin-bottom:14px}
   #conn{position:fixed;left:10px;bottom:10px;font-size:12px;color:#8b93a7;z-index:20}
 
-  /* 手机竖屏：铺满 + 缩小待命区 */
-  body.device-phone.orient-portrait #tray{min-height:60px;max-height:18vh}
-  body.device-phone.orient-portrait canvas{width:100%;height:100%;object-fit:cover}
-  body.device-phone.orient-portrait .trayTroop{width:56px;min-height:56px;font-size:11px}
-  body.device-phone.orient-portrait #hud{padding:4px 8px;font-size:11px;gap:4px}
-  body.device-phone.orient-portrait #hud .val{font-size:13px}
+  /* 手机竖屏：保持完整 3:5 战场并压缩操作区 */
+  body.device-phone.orient-portrait #tray{height:92px;min-height:76px;max-height:14vh}
+  body.device-phone.orient-portrait .trayTroop{width:60px;min-height:64px;font-size:11px}
+  body.device-phone.orient-portrait #hud{padding:3px 6px;gap:3px 6px}
+  body.device-phone.orient-portrait #hud .val{font-size:12px}
 </style>
 </head>
 <body>
@@ -119,8 +120,8 @@
       <button id="btnWave" disabled style="margin-left:auto">开始进攻</button>
     </div>
     <div id="canvasBox">
-      <canvas id="gameCanvas" width="960" height="576"></canvas>
-      <canvas id="miniMap" width="160" height="120" style="position:absolute;top:8px;right:8px;width:160px;height:120px;border-radius:8px;border:1px solid rgba(120,160,100,.5);background:rgba(10,16,8,.85);cursor:pointer;display:none;z-index:10"></canvas>
+      <canvas id="gameCanvas" width="576" height="960"></canvas>
+      <canvas id="miniMap" width="160" height="120"></canvas>
     </div>
     <div id="tray">
       <div class="title">我的待命</div>
@@ -132,12 +133,17 @@
 <div id="msg"><div class="box"><h2 id="msgTitle"></h2><p id="msgText"></p><div class="row"><button id="msgRematch">再来一局</button><button id="msgHome" class="secondary">回大厅</button></div></div></div>
 <div id="conn">离线</div>
 
-<script src="/client/network-client.js"></script>
+<script src="shared/game-types.js"></script>
+<script src="client/network-client.js"></script>
 <script>
 "use strict";
 
-// 简易设备检测（用于竖屏放大绘制）
-const CV_W=960, CV_H=576;
+const {
+  CANVAS_WIDTH:CV_W, CANVAS_HEIGHT:CV_H, CELL, MAX_LEVEL, WAVE_SIZE,
+  START_CRYSTALS, PATH, SLOT_META, INDEPENDENT_PATHS, INDEPENDENT_SLOT_META
+}=window.GameTypes;
+
+// 简易设备检测（用于小屏绘制）
 const device={drawScale:1};
 (function detectDevice(){
   const w=window.innerWidth||375, h=window.innerHeight||667;
@@ -148,7 +154,7 @@ const device={drawScale:1};
   document.body.classList.add(mobile?"device-phone":"device-desktop");
   document.body.classList.add(portrait?"orient-portrait":"orient-landscape");
   const box=document.getElementById("canvasBox").getBoundingClientRect();
-  device.drawScale=Math.max(1.0,Math.min(2.8,2.0*Math.sqrt(CV_W/(box.width||CV_W))));
+  device.drawScale=Math.max(0.85,Math.min(1.35,Math.sqrt(CV_W/(box.width||CV_W))));
 })();
 window.addEventListener("resize",()=>{
   const w=window.innerWidth||375,h=window.innerHeight||667;
@@ -156,28 +162,11 @@ window.addEventListener("resize",()=>{
   document.body.classList.remove("orient-portrait","orient-landscape");
   document.body.classList.add(portrait?"orient-portrait":"orient-landscape");
   const box=document.getElementById("canvasBox").getBoundingClientRect();
-  device.drawScale=Math.max(1.0,Math.min(2.8,2.0*Math.sqrt(CV_W/(box.width||CV_W))));
+  device.drawScale=Math.max(0.85,Math.min(1.35,Math.sqrt(CV_W/(box.width||CV_W))));
 });
 
-const CELL=64, MAX_LEVEL=6, WAVE_SIZE=20, START_CRYSTALS=10;
 const LEVEL_COLORS=["#ffffff","#7ee787","#4fd1ff","#c084fc","#fb923c","#f43f5e"];
-const PATH=[{x:40,y:70},{x:860,y:70},{x:860,y:180},{x:100,y:180},{x:100,y:290},{x:860,y:290},{x:860,y:400},{x:100,y:400},{x:100,y:520},{x:520,y:520}];
 const SLOTS=[];
-(function(){
-  const bandY=[115,225,335,445], startX=150, gap=CELL+6, cols=8;
-  bandY.forEach(y=>{ for(let c=0;c<cols;c++) SLOTS.push({x:startX+c*gap,y,troop:null}); });
-})();
-// 独立模式的3条路径和槽位
-const INDEP_PATHS=[
-  [{x:30,y:55},{x:860,y:55},{x:860,y:105},{x:100,y:105},{x:100,y:155},{x:860,y:155}],
-  [{x:30,y:215},{x:860,y:215},{x:860,y:265},{x:100,y:265},{x:100,y:315},{x:860,y:315}],
-  [{x:30,y:375},{x:860,y:375},{x:860,y:425},{x:100,y:425},{x:100,y:475},{x:860,y:475}],
-];
-const INDEP_SLOTS=[
-  [{x:220,y:72},{x:340,y:72},{x:460,y:72},{x:580,y:72},{x:220,y:102},{x:340,y:102},{x:460,y:102},{x:580,y:102},{x:220,y:132},{x:340,y:132},{x:460,y:132},{x:580,y:132},{x:220,y:162},{x:340,y:162},{x:460,y:162},{x:580,y:162}],
-  [{x:220,y:232},{x:340,y:232},{x:460,y:232},{x:580,y:232},{x:220,y:262},{x:340,y:262},{x:460,y:262},{x:580,y:262},{x:220,y:292},{x:340,y:292},{x:460,y:292},{x:580,y:292},{x:220,y:322},{x:340,y:322},{x:460,y:322},{x:580,y:322}],
-  [{x:220,y:392},{x:340,y:392},{x:460,y:392},{x:580,y:392},{x:220,y:422},{x:340,y:422},{x:460,y:422},{x:580,y:422},{x:220,y:452},{x:340,y:452},{x:460,y:452},{x:580,y:452},{x:220,y:482},{x:340,y:482},{x:460,y:482},{x:580,y:482}],
-];
 
 const canvas=document.getElementById("gameCanvas");
 const ctx=canvas.getContext("2d");
@@ -312,6 +301,39 @@ function renderLobby(){
   }
 }
 
+function selectedPathIndex(){
+  return currentViewPath>=0?currentViewPath:myPathIndex;
+}
+function getRenderState(){
+  if(!state) return state;
+  const base=state.renderState&&typeof state.renderState==="object"?{...state,...state.renderState}:state;
+  if(gameMode!=="independent") return base;
+  const viewIdx=selectedPathIndex();
+  const pathView=(state.pathViews||base.pathViews||[]).find(view=>view.pathIndex===viewIdx);
+  if(pathView) return {...base,...pathView,pathIndex:viewIdx};
+  return viewIdx===myPathIndex ? base : {...base,pathIndex:viewIdx,slots:[],enemies:[],bullets:[],beams:[],clouds:[],effects:[]};
+}
+function rebuildSlots(meta,slotData){
+  SLOTS.length=0;
+  (meta||[]).forEach((pos,i)=>{
+    const t=slotData&&slotData[i];
+    SLOTS.push({
+      x:pos.x,y:pos.y,
+      troop:t?{...t,type:{name:t.name,icon:t.icon,tag:t.tag,desc:t.desc},mode:t.mode,range:t.range||110}:null
+    });
+  });
+}
+function syncSlotsForView(){
+  if(!state) return;
+  if(gameMode==="independent"){
+    const viewIdx=selectedPathIndex();
+    const renderState=getRenderState();
+    rebuildSlots(INDEPENDENT_SLOT_META[viewIdx]||INDEPENDENT_SLOT_META[0],renderState&&renderState.slots);
+  } else {
+    rebuildSlots(SLOT_META,getRenderState().slots);
+  }
+}
+
 function applyState(s){
   if(!s) return;
   state=s;
@@ -319,32 +341,9 @@ function applyState(s){
   localTray=s.tray||[];
   gameMode=s.mode||"coop";
   myPathIndex=s.pathIndex!=null?s.pathIndex:-1;
-
-  if(gameMode==="independent" && myPathIndex>=0){
-    // 独立模式：用自己路径的槽位
-    const indepSlots=INDEP_SLOTS[myPathIndex]||INDEP_SLOTS[0];
-    // 清空并重建SLOTS为16个槽位
-    SLOTS.length=0;
-    indepSlots.forEach(pos=>SLOTS.push({x:pos.x,y:pos.y,troop:null}));
-    const slotData=s.slots||[];
-    for(let i=0;i<SLOTS.length;i++){
-      const t=slotData[i];
-      SLOTS[i].troop=t?{...t,type:{name:t.name,icon:t.icon,tag:t.tag,desc:t.desc},mode:t.mode,range:t.range||110}:null;
-    }
-    document.getElementById("miniMap").style.display="block";
-  } else {
-    // 合作模式：还原32个槽位
-    if(SLOTS.length!==32){
-      SLOTS.length=0;
-      const bandY=[115,225,335,445], startX=150, gap=CELL+6, cols=8;
-      bandY.forEach(y=>{ for(let c=0;c<cols;c++) SLOTS.push({x:startX+c*gap,y,troop:null}); });
-    }
-    for(let i=0;i<SLOTS.length;i++){
-      const t=s.slots&&s.slots[i];
-      SLOTS[i].troop=t?{...t,type:{name:t.name,icon:t.icon,tag:t.tag,desc:t.desc},mode:t.mode,range:t.range||110}:null;
-    }
-    document.getElementById("miniMap").style.display="none";
-  }
+  if(gameMode!=="independent") currentViewPath=-1;
+  syncSlotsForView();
+  document.getElementById("miniMap").style.display=gameMode==="independent"?"block":"none";
   try{ tickSfxFromState(s); }catch(e){}
   renderTray();
   updateHUD();
@@ -407,8 +406,8 @@ function showResult(s){
 
 function clientToCanvas(clientX,clientY){
   const r=canvas.getBoundingClientRect();
-  if(r.width<=0||r.height<=0) return {x:0,y:0};
-  return {x:(clientX-r.left)*(CV_W/r.width), y:(clientY-r.top)*(CV_H/r.height)};
+  if(r.width<=0||r.height<=0 || clientX<r.left || clientX>r.right || clientY<r.top || clientY>r.bottom) return null;
+  return {x:(clientX-r.left)*(canvas.width/r.width), y:(clientY-r.top)*(canvas.height/r.height)};
 }
 function slotAt(x,y){
   for(let i=0;i<SLOTS.length;i++){
@@ -713,10 +712,11 @@ function draw(){
   ctx.setTransform(1,0,0,1,0,0);
   ctx.clearRect(0,0,CV_W,CV_H);
 
-  // 确定当前渲染的路径
+  // 确定当前渲染的路径和路径状态
   const isIndep=gameMode==="independent" && state;
-  const viewIdx=isIndep?(currentViewPath>=0?currentViewPath:myPathIndex):0;
-  const activePath=isIndep?(INDEP_PATHS[viewIdx]||INDEP_PATHS[0]):PATH;
+  const viewIdx=isIndep?selectedPathIndex():0;
+  const renderState=getRenderState();
+  const activePath=isIndep?(INDEPENDENT_PATHS[viewIdx]||INDEPENDENT_PATHS[0]):PATH;
 
   // terrain background
   ctx.fillStyle="#1a2818"; ctx.fillRect(0,0,CV_W,CV_H);
@@ -769,7 +769,7 @@ function draw(){
   }
   // crystals with glow
   const end=activePath[activePath.length-1];
-  const crystals=state?state.crystals:START_CRYSTALS;
+  const crystals=renderState?renderState.crystals:START_CRYSTALS;
   const t2=(typeof performance!=="undefined" ? performance.now() : 0)/1000;
   for(let i=0;i<START_CRYSTALS;i++){
     const cx=end.x-90+(i%5)*40, cy=end.y-14+((i/5)|0)*30, alive=i<crystals;
@@ -784,14 +784,14 @@ function draw(){
     if(alive){ ctx.strokeStyle=`rgba(200,240,255,${0.5+pulse*0.5})`; ctx.lineWidth=1.5; ctx.stroke(); }
   }
   // poison clouds
-  for(const c of (state&&state.clouds)||[]){
+  for(const c of (renderState&&renderState.clouds)||[]){
     const a=Math.min(0.35, (c.life||1)*0.12);
     ctx.beginPath(); ctx.arc(c.x,c.y,c.r,0,Math.PI*2);
     ctx.fillStyle=`rgba(132,204,22,${a})`; ctx.fill();
     ctx.strokeStyle=`rgba(163,230,53,${a+0.2})`; ctx.lineWidth=1.5; ctx.stroke();
   }
   // effects
-  for(const ef of (state&&state.effects)||[]){
+  for(const ef of (renderState&&renderState.effects)||[]){
     const a=Math.max(0.1, (ef.life||0.1)/(ef.max||0.2));
     if(ef.kind==="ring"){
       ctx.beginPath(); ctx.arc(ef.x,ef.y,(ef.r||40)*(1.05-a*0.2),0,Math.PI*2);
@@ -806,7 +806,7 @@ function draw(){
     }
   }
   // beams with glow
-  for(const b of (state&&state.beams)||[]){
+  for(const b of (renderState&&renderState.beams)||[]){
     const a=Math.min(1,(b.life||0.2)*3);
     ctx.beginPath(); ctx.moveTo(b.x,b.y); ctx.lineTo(b.tx,b.ty);
     ctx.strokeStyle=`rgba(79,209,255,${a*0.3})`; ctx.lineWidth=8; ctx.stroke();
@@ -828,7 +828,7 @@ function draw(){
     }
   }
   // enemies（更小 + 阴影立体感，沿路径走动）
-  const enemies=state?state.enemies:[];
+  const enemies=renderState?renderState.enemies:[];
   for(const e of enemies){
     drawEnemyAt(e);
     if(e.slow){
@@ -847,7 +847,7 @@ function draw(){
     ctx.strokeStyle="rgba(0,0,0,.5)"; ctx.lineWidth=1; ctx.strokeRect(e.x-w/2,barY,w,h);
   }
   // bullets with glow trail
-  for(const b of (state&&state.bullets)||[]){
+  for(const b of (renderState&&renderState.bullets)||[]){
     const a=Math.max(0.3,(b.life||0.1)/(b.maxLife||0.2));
     ctx.globalAlpha=a;
     const glow=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,(b.size||3)*3);
@@ -984,69 +984,65 @@ function tickSfxFromState(s){
 // ============ 迷你地图（独立模式） ============
 const miniMapCanvas=document.getElementById("miniMap");
 const mmCtx=miniMapCanvas?miniMapCanvas.getContext("2d"):null;
-const MM_W=160, MM_H=120, MM_PAD=8;
-const MM_SCALE_X=(MM_W-MM_PAD*2)/960;
-const MM_SCALE_Y=(MM_H-MM_PAD*2)/576;
+const MM_W=160, MM_H=120, MM_PAD=6;
 
 function drawMiniMap(){
   if(!mmCtx || !state || gameMode!=="independent") return;
   mmCtx.clearRect(0,0,MM_W,MM_H);
-  mmCtx.fillStyle="rgba(10,16,8,.9)";
+  mmCtx.fillStyle="rgba(10,16,8,.94)";
   mmCtx.fillRect(0,0,MM_W,MM_H);
-
-  // 画三条路径
   const colors=["#4fd1ff","#7ee787","#fb923c"];
-  for(let p=0;p<3;p++){
-    const path=INDEP_PATHS[p];
+  const players=(state.players||[]).filter(player=>player.pathIndex>=0);
+  const rowH=(MM_H-MM_PAD*2)/Math.max(1,players.length);
+  const previewW=76, previewH=rowH-8;
+  const scale=Math.min((previewW-8)/CV_W,(previewH-6)/CV_H);
+
+  players.forEach((player,row)=>{
+    const p=player.pathIndex;
+    const y=MM_PAD+row*rowH;
+    const path=INDEPENDENT_PATHS[p]||INDEPENDENT_PATHS[0];
     const isMe=p===myPathIndex;
-    const isView=currentViewPath===p || (currentViewPath===-1 && isMe);
-    mmCtx.strokeStyle=isView?colors[p]:"rgba(120,140,100,.4)";
-    mmCtx.lineWidth=isMe?2:1;
+    const isView=p===selectedPathIndex();
+    mmCtx.fillStyle=isView?"rgba(120,160,100,.18)":"rgba(18,21,28,.5)";
+    mmCtx.fillRect(MM_PAD,y,MM_W-MM_PAD*2,rowH-2);
+    if(isView){
+      mmCtx.strokeStyle=colors[p]; mmCtx.lineWidth=2;
+      mmCtx.strokeRect(MM_PAD+.5,y+.5,MM_W-MM_PAD*2-1,rowH-3);
+    }
+    const ox=MM_PAD+4+(previewW-CV_W*scale)/2;
+    const oy=y+3+(previewH-CV_H*scale)/2;
+    mmCtx.strokeStyle=isView?colors[p]:"rgba(120,140,100,.55)";
+    mmCtx.lineWidth=isView?1.6:1;
     mmCtx.beginPath();
-    mmCtx.moveTo(MM_PAD+path[0].x*MM_SCALE_X, MM_PAD+path[0].y*MM_SCALE_Y);
-    for(let i=1;i<path.length;i++){
-      mmCtx.lineTo(MM_PAD+path[i].x*MM_SCALE_X, MM_PAD+path[i].y*MM_SCALE_Y);
-    }
+    mmCtx.moveTo(ox+path[0].x*scale,oy+path[0].y*scale);
+    for(let i=1;i<path.length;i++) mmCtx.lineTo(ox+path[i].x*scale,oy+path[i].y*scale);
     mmCtx.stroke();
-
-    // 玩家标签
-    const player=state.players.find(pl=>pl.pathIndex===p);
-    if(player){
-      mmCtx.font="bold 9px sans-serif";
-      mmCtx.fillStyle=isMe?"#e8f0e0":"#7a8a68";
-      mmCtx.textAlign="left";
-      mmCtx.fillText(player.name, MM_PAD+4, MM_PAD+p*38+12);
-    }
-  }
-
-  // 高亮当前查看的路径
-  if(currentViewPath>=0){
-    const path=INDEP_PATHS[currentViewPath];
-    mmCtx.strokeStyle=colors[currentViewPath];
-    mmCtx.lineWidth=2;
-    mmCtx.setLineDash([3,3]);
-    mmCtx.strokeRect(MM_PAD-2, MM_PAD-2, MM_W-MM_PAD*2+4, MM_H-MM_PAD*2+4);
-    mmCtx.setLineDash([]);
-  }
+    mmCtx.font="bold 10px sans-serif";
+    mmCtx.fillStyle=isView?"#e8f0e0":"#8b93a7";
+    mmCtx.textAlign="left";
+    mmCtx.fillText(player.name||`路径 ${p+1}`,MM_PAD+previewW+5,y+15);
+    mmCtx.font="9px sans-serif";
+    mmCtx.fillStyle=isMe?"#7ee787":"#7a8a68";
+    mmCtx.fillText(isMe?"我的路径":"点击查看",MM_PAD+previewW+5,y+29);
+  });
 }
 
-// 迷你地图点击切换视角
+// 迷你地图按行切换独立路径视角
 if(miniMapCanvas){
   miniMapCanvas.addEventListener("click", e=>{
     const rect=miniMapCanvas.getBoundingClientRect();
+    if(rect.width<=0 || rect.height<=0) return;
     const clickY=(e.clientY-rect.top)/rect.height*MM_H;
-    // 判断点击了哪条路径
-    for(let p=0;p<3;p++){
-      const bandTop=MM_PAD+p*38;
-      const bandBot=bandTop+36;
-      if(clickY>=bandTop && clickY<=bandBot){
-        if(currentViewPath===p){
-          currentViewPath=-1; // 点自己的路回到默认
-        } else {
-          currentViewPath=p;
-        }
-        return;
-      }
+    const players=(state.players||[]).filter(player=>player.pathIndex>=0);
+    if(!players.length) return;
+    const row=Math.floor((clickY-MM_PAD)/((MM_H-MM_PAD*2)/players.length));
+    const player=players[row];
+    if(!player) return;
+    const p=player.pathIndex;
+    currentViewPath=p===myPathIndex?-1:p;
+    syncSlotsForView();
+    if(drag.active){
+      drag.active=false; drag.troop=null; drag.from=null; drag.pointerId=null; ghostEl.style.display="none";
     }
   });
 }
@@ -1060,21 +1056,26 @@ function loop(){
   requestAnimationFrame(loop);
 }
 
+function viewingOwnPath(){
+  return gameMode!=="independent" || selectedPathIndex()===myPathIndex;
+}
+
 // drag handlers — local preview only, command on drop
 trayEl.addEventListener("pointerdown", e=>{
   initAudio();
+  if(!viewingOwnPath()) return;
   const el=e.target.closest(".trayTroop"); if(!el) return;
   const tr=localTray.find(t=>t.id===el.dataset.id); if(!tr) return;
   e.preventDefault(); el.setPointerCapture?.(e.pointerId);
   drag.active=true; drag.troop=tr; drag.from={type:"tray"}; drag.pointerId=e.pointerId;
-  const p=clientToCanvas(e.clientX,e.clientY); drag.mx=p.x; drag.my=p.y;
+  const p=clientToCanvas(e.clientX,e.clientY); drag.mx=p?p.x:CV_W/2; drag.my=p?p.y:CV_H;
   ghostEl.style.display="flex"; ghostEl.innerHTML=`<div style="font-size:26px">${tr.icon||"🤖"}</div><div style="font-size:11px">${tr.name||""}</div>`;
   ghostEl.style.left=e.clientX+"px"; ghostEl.style.top=e.clientY+"px";
 });
 canvas.addEventListener("pointerdown", e=>{
   initAudio();
-  if(drag.active) return;
-  const p=clientToCanvas(e.clientX,e.clientY);
+  if(drag.active || !viewingOwnPath()) return;
+  const p=clientToCanvas(e.clientX,e.clientY); if(!p) return;
   const hit=slotAt(p.x,p.y);
   if(hit && hit.slot.troop && hit.slot.troop.ownerId===me.id){
     e.preventDefault(); canvas.setPointerCapture?.(e.pointerId);
@@ -1087,14 +1088,14 @@ canvas.addEventListener("pointerdown", e=>{
 window.addEventListener("pointermove", e=>{
   if(!drag.active) return;
   if(drag.pointerId!=null && e.pointerId!==drag.pointerId) return;
-  const p=clientToCanvas(e.clientX,e.clientY); drag.mx=p.x; drag.my=p.y;
+  const p=clientToCanvas(e.clientX,e.clientY); if(!p) return; drag.mx=p.x; drag.my=p.y;
   ghostEl.style.left=e.clientX+"px"; ghostEl.style.top=e.clientY+"px";
 });
 window.addEventListener("pointerup", e=>{
   if(!drag.active) return;
   if(drag.pointerId!=null && e.pointerId!==drag.pointerId) return;
   const p=clientToCanvas(e.clientX,e.clientY);
-  const hit=slotAt(p.x,p.y);
+  const hit=p?slotAt(p.x,p.y):null;
   if(hit && drag.troop){
     const fromSlot=drag.from?.type==="slot";
     // 战场兵只能合成，不能自由挪空位；待命区可部署到空位
@@ -1131,7 +1132,7 @@ document.getElementById("btnJoin").onclick=()=>{
   if(!code){ showErr("home","请输入房间码"); return; }
   net.send("join",{code,name:me.name});
 };
-document.getElementById("btnSolo").onclick=()=>{ location.href="/"; };
+document.getElementById("btnSolo").onclick=()=>{ location.href="./"; };
 document.getElementById("btnReady").onclick=()=>{
   const meP=(room?.players||[]).find(p=>p.id===me.id);
   net.send("ready",{value:!(meP&&meP.ready)});
