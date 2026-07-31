@@ -7,7 +7,7 @@
 <title>合兵塔防 · 三人联机</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{height:100%;height:100dvh;background:#0a1008;color:#e8f0e0;font-family:"Segoe UI","Microsoft YaHei",sans-serif;overflow:hidden;touch-action:none;overscroll-behavior:none}
+  html,body{height:100%;height:100dvh;background:#0a1008;color:#e8f0e0;font-family:"Segoe UI","Microsoft YaHei",sans-serif;overflow:hidden;touch-action:manipulation;overscroll-behavior:none}
   #app{display:flex;flex-direction:column;width:100%;height:100%;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
   button,input{font:inherit}
   button{border:none;border-radius:10px;background:#3a6a2a;color:#e8f0e0;font-weight:700;min-height:44px;padding:10px 16px;cursor:pointer;touch-action:manipulation}
@@ -37,13 +37,15 @@
   #hud button{min-height:32px;padding:5px 9px;font-size:11px}
   #playersBar{width:100%;display:flex;gap:4px;flex-wrap:wrap}
   #playersBar .chip{background:#12151c;border-radius:999px;padding:2px 7px;font-size:10px}
+  #gameError{display:none;width:100%;color:#f43f5e;font-size:11px;line-height:1.35}
+  #gameError.visible{display:block}
   #canvasBox{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center;background:#0a1008;overflow:hidden}
   #gameCanvas{width:auto;height:auto;max-width:100%;max-height:100%;aspect-ratio:3/5;background:#1a2018;touch-action:none;display:block}
   #miniMap{position:absolute;top:8px;right:8px;width:120px;height:90px;border-radius:8px;border:1px solid rgba(120,160,100,.5);background:rgba(10,16,8,.85);cursor:pointer;display:none;z-index:10}
   #tray{height:100px;min-height:88px;max-height:16vh;background:#1a2018;border-top:2px solid #3a4a30;display:flex;align-items:center;padding:5px 8px;gap:6px}
   #tray .title{color:#7a8a68;font-size:11px;writing-mode:vertical-lr}
   #trayItems{display:flex;gap:8px;overflow-x:auto;flex:1;align-items:center;touch-action:pan-x}
-  .trayTroop{width:82px;min-height:88px;border-radius:12px;background:linear-gradient(180deg,#2a3040,#222830);border:2px solid #7ee787;display:flex;flex-direction:column;align-items:center;justify-content:center;touch-action:none;padding:5px;flex:0 0 auto;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+  .trayTroop{width:82px;min-height:88px;border-radius:12px;background:linear-gradient(180deg,#2a3040,#222830);border:2px solid #7ee787;display:flex;flex-direction:column;align-items:center;justify-content:center;touch-action:pan-x;padding:5px;flex:0 0 auto;box-shadow:0 2px 8px rgba(0,0,0,.35)}
   #msg{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:40}
   #msg .box{background:rgba(15,20,12,.96);border:2px solid #5a7a48;border-radius:14px;padding:22px;width:min(92vw,420px);text-align:center}
   #msg h2{margin-bottom:8px}
@@ -117,6 +119,7 @@
       <div class="stat"><span class="lbl">阶段</span><span class="val" id="uiPhase">备战</span></div>
       <div class="stat"><span class="lbl">倒计时</span><span class="val" id="uiTimer">--</span></div>
       <div id="playersBar"></div>
+      <div id="gameError" role="alert" aria-live="polite"></div>
       <button id="btnWave" disabled style="margin-left:auto">开始进攻</button>
     </div>
     <div id="canvasBox">
@@ -179,6 +182,7 @@ const ui={
   homeErr:document.getElementById("homeErr"),
   lobbyStatus:document.getElementById("lobbyStatus"),
   lobbyErr:document.getElementById("lobbyErr"),
+  gameError:document.getElementById("gameError"),
   roomCode:document.getElementById("roomCode"),
   inviteLink:document.getElementById("inviteLink"),
   playerList:document.getElementById("playerList"),
@@ -198,6 +202,25 @@ const ui={
 };
 
 const me={id:null, name:""};
+const RESUME_STORAGE_KEY="tafangames.online.resume";
+const RESUME_STORAGE_VERSION=1;
+function loadResumeCredentials(){
+  try{
+    const value=JSON.parse(localStorage.getItem(RESUME_STORAGE_KEY)||"null");
+    return value&&value.version===RESUME_STORAGE_VERSION&&value.playerId&&value.roomToken&&value.resumeToken?value:null;
+  }catch(_){ return null; }
+}
+function saveResumeCredentials(identity){
+  if(!identity.roomToken||!identity.resumeToken) return;
+  try{ localStorage.setItem(RESUME_STORAGE_KEY,JSON.stringify({version:RESUME_STORAGE_VERSION,playerId:identity.playerId,roomToken:identity.roomToken,resumeToken:identity.resumeToken})); }catch(_){}
+}
+function clearResumeCredentials(){
+  try{ localStorage.removeItem(RESUME_STORAGE_KEY); }catch(_){}
+}
+let resumeCredentials=loadResumeCredentials();
+let resumePending=false;
+let explicitLeavePending=false;
+let inviteJoinSent=false;
 let room=null;
 let state=null;
 let lastRevision=-1;
@@ -217,7 +240,17 @@ function setScreen(name){
   if(name==="stage") ui.stage.style.display="flex";
   else ui.stage.style.display="none";
 }
-function showErr(where,msg){ (where==="home"?ui.homeErr:ui.lobbyErr).textContent=msg||""; }
+function activeScreen(){
+  if(ui.stage.classList.contains("active")) return "stage";
+  if(ui.lobby.classList.contains("active")) return "lobby";
+  return "home";
+}
+function showErr(where,msg){
+  const target=where==="stage"?ui.gameError:(where==="lobby"?ui.lobbyErr:ui.homeErr);
+  target.textContent=msg||"";
+  if(where==="stage") target.classList.toggle("visible",!!msg);
+}
+function showActiveErr(msg){ showErr(activeScreen(),msg); }
 function inviteUrl(token){
   const u=new URL(location.href);
   u.searchParams.set("room", token);
@@ -240,11 +273,39 @@ const net=new NetworkClient({
   },
   onError(msg){
     const target=(location.protocol==="https:"?"wss://":"ws://")+location.host;
-    showErr(room?"lobby":"home", msg+"（"+target+"）");
+    showActiveErr(msg+"（"+target+"）");
   },
   onMessage(msg){
-    if(msg.type==="hello"){ me.id=msg.playerId; return; }
-    if(msg.type==="error"){ showErr(room?"lobby":"home", msg.message); return; }
+    if(msg.type==="hello"){
+      if(msg.playerId) me.id=msg.playerId;
+      resumeCredentials=loadResumeCredentials();
+      if(resumeCredentials){
+        resumePending=net.send("resume",{roomToken:resumeCredentials.roomToken,playerId:resumeCredentials.playerId,resumeToken:resumeCredentials.resumeToken});
+      } else {
+        maybeJoinInvite();
+      }
+      return;
+    }
+    if(msg.type==="identity"){
+      me.id=msg.playerId;
+      resumePending=false;
+      resumeCredentials={version:RESUME_STORAGE_VERSION,playerId:msg.playerId,roomToken:msg.roomToken,resumeToken:msg.resumeToken};
+      saveResumeCredentials(msg);
+      return;
+    }
+    if(msg.type==="error" && msg.code==="resume_failed"){
+      clearResumeCredentials();
+      resumeCredentials=null;
+      resumePending=false;
+      explicitLeavePending=false;
+      room=null; state=null; localTray=[]; lastRevision=-1;
+      ui.msg.style.display="none";
+      showErr("lobby",""); showErr("stage","");
+      setScreen("home");
+      showErr("home",msg.message||"无法恢复上次房间，请重新创建或加入");
+      return;
+    }
+    if(msg.type==="error"){ showActiveErr(msg.message); return; }
     if(msg.type==="room"){
       room=msg;
       renderLobby();
@@ -260,7 +321,9 @@ const net=new NetworkClient({
       return;
     }
     if(msg.type==="left"){
-      room=null; state=null; setScreen("home");
+      if(explicitLeavePending){ clearResumeCredentials(); resumeCredentials=null; }
+      explicitLeavePending=false;
+      room=null; state=null; localTray=[]; lastRevision=-1; setScreen("home");
     }
   }
 });
@@ -351,9 +414,10 @@ function applyState(s){
 
 function updateHUD(){
   if(!state) return;
+  const renderState=getRenderState()||state;
   ui.level.textContent=state.level;
-  ui.wave.textContent=`${state.killed||0}/${state.waveSize||WAVE_SIZE}`;
-  ui.crystals.textContent=state.crystals;
+  ui.wave.textContent=`${renderState.killed||0}/${state.waveSize||WAVE_SIZE}`;
+  ui.crystals.textContent=renderState.crystals;
   ui.phase.textContent=state.phase==="prep"?"备战":(state.phase==="battle"?"进攻":state.phase);
   if(state.phase==="prep"){
     const sec=Math.max(0,Math.ceil(state.prepTimer||0));
@@ -1041,6 +1105,8 @@ if(miniMapCanvas){
     const p=player.pathIndex;
     currentViewPath=p===myPathIndex?-1:p;
     syncSlotsForView();
+    updateHUD();
+    drawMiniMap();
     if(drag.active){
       drag.active=false; drag.troop=null; drag.from=null; drag.pointerId=null; ghostEl.style.display="none";
     }
@@ -1061,16 +1127,28 @@ function viewingOwnPath(){
 }
 
 // drag handlers — local preview only, command on drop
+const trayGesture={pending:false,pointerId:null,startX:0,startY:0,el:null,troop:null};
+function beginTrayDrag(e,el,tr){
+  e.preventDefault();
+  el.setPointerCapture?.(e.pointerId);
+  trayGesture.pending=false;
+  drag.active=true; drag.troop=tr; drag.from={type:"tray"}; drag.pointerId=e.pointerId;
+  const p=clientToCanvas(e.clientX,e.clientY); drag.mx=p?p.x:CV_W/2; drag.my=p?p.y:CV_H;
+  ghostEl.style.display="flex"; ghostEl.innerHTML=`<div style="font-size:26px">${tr.icon||"🤖"}</div><div style="font-size:11px">${tr.name||""}</div>`;
+  ghostEl.style.left=e.clientX+"px"; ghostEl.style.top=e.clientY+"px";
+}
 trayEl.addEventListener("pointerdown", e=>{
   initAudio();
   if(!viewingOwnPath()) return;
   const el=e.target.closest(".trayTroop"); if(!el) return;
   const tr=localTray.find(t=>t.id===el.dataset.id); if(!tr) return;
-  e.preventDefault(); el.setPointerCapture?.(e.pointerId);
-  drag.active=true; drag.troop=tr; drag.from={type:"tray"}; drag.pointerId=e.pointerId;
-  const p=clientToCanvas(e.clientX,e.clientY); drag.mx=p?p.x:CV_W/2; drag.my=p?p.y:CV_H;
-  ghostEl.style.display="flex"; ghostEl.innerHTML=`<div style="font-size:26px">${tr.icon||"🤖"}</div><div style="font-size:11px">${tr.name||""}</div>`;
-  ghostEl.style.left=e.clientX+"px"; ghostEl.style.top=e.clientY+"px";
+  if(e.pointerType==="mouse"){
+    beginTrayDrag(e,el,tr);
+    return;
+  }
+  trayGesture.pending=true; trayGesture.pointerId=e.pointerId;
+  trayGesture.startX=e.clientX; trayGesture.startY=e.clientY;
+  trayGesture.el=el; trayGesture.troop=tr;
 });
 canvas.addEventListener("pointerdown", e=>{
   initAudio();
@@ -1086,12 +1164,25 @@ canvas.addEventListener("pointerdown", e=>{
   }
 });
 window.addEventListener("pointermove", e=>{
+  if(trayGesture.pending && e.pointerId===trayGesture.pointerId){
+    const dx=e.clientX-trayGesture.startX, dy=e.clientY-trayGesture.startY;
+    if(Math.hypot(dx,dy)<8) return;
+    if(Math.abs(dx)>=Math.abs(dy)){
+      trayGesture.pending=false; trayGesture.pointerId=null; trayGesture.el=null; trayGesture.troop=null;
+      return;
+    }
+    const el=trayGesture.el, tr=trayGesture.troop;
+    beginTrayDrag(e,el,tr);
+  }
   if(!drag.active) return;
   if(drag.pointerId!=null && e.pointerId!==drag.pointerId) return;
   const p=clientToCanvas(e.clientX,e.clientY); if(!p) return; drag.mx=p.x; drag.my=p.y;
   ghostEl.style.left=e.clientX+"px"; ghostEl.style.top=e.clientY+"px";
 });
 window.addEventListener("pointerup", e=>{
+  if(trayGesture.pending && e.pointerId===trayGesture.pointerId){
+    trayGesture.pending=false; trayGesture.pointerId=null; trayGesture.el=null; trayGesture.troop=null;
+  }
   if(!drag.active) return;
   if(drag.pointerId!=null && e.pointerId!==drag.pointerId) return;
   const p=clientToCanvas(e.clientX,e.clientY);
@@ -1114,6 +1205,7 @@ window.addEventListener("pointerup", e=>{
   drag.active=false; drag.troop=null; drag.from=null; drag.pointerId=null; ghostEl.style.display="none";
 });
 window.addEventListener("pointercancel", ()=>{
+  trayGesture.pending=false; trayGesture.pointerId=null; trayGesture.el=null; trayGesture.troop=null;
   drag.active=false; drag.troop=null; drag.from=null; drag.pointerId=null; ghostEl.style.display="none";
 });
 
@@ -1142,7 +1234,10 @@ document.getElementById("btnWave").onclick=()=>{
   if(!state || state.phase!=="prep") return;
   net.send("startWave",{});
 };
-document.getElementById("btnLeave").onclick=()=>net.send("leave",{});
+document.getElementById("btnLeave").onclick=()=>{
+  explicitLeavePending=true;
+  if(!net.send("leave",{})) explicitLeavePending=false;
+};
 document.getElementById("btnCopyCode").onclick=async()=>{
   await copyText(room?.roomCode||"");
   ui.lobbyStatus.textContent="房间码已复制";
@@ -1158,14 +1253,18 @@ document.getElementById("msgRematch").onclick=()=>{
 };
 document.getElementById("msgHome").onclick=()=>{
   ui.msg.style.display="none";
-  net.send("leave",{});
-  setScreen("home");
+  explicitLeavePending=true;
+  if(!net.send("leave",{})) explicitLeavePending=false;
 };
 
 // auto join from invite link
 const params=new URLSearchParams(location.search);
 const roomToken=params.get("room");
 if(roomToken) document.getElementById("codeInput").value=roomToken;
+function maybeJoinInvite(){
+  if(!roomToken || room || resumePending || inviteJoinSent) return;
+  inviteJoinSent=net.send("join",{token:roomToken,name:document.getElementById("nameInput").value.trim()});
+}
 
 document.addEventListener("visibilitychange", ()=>{
   if(document.visibilityState==="visible"){
@@ -1177,12 +1276,6 @@ window.addEventListener("pageshow", ()=>{
 });
 
 net.connect();
-// auto-join token after short wait for hello
-if(roomToken){
-  setTimeout(()=>{
-    if(!room) net.send("join",{token:roomToken,name:document.getElementById("nameInput").value.trim()});
-  },400);
-}
 requestAnimationFrame(loop);
 </script>
 </body>

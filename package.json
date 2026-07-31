@@ -6,10 +6,21 @@
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
-    "check": "node --check server/index.js && node --check server/room-manager.js && node --check server/game-session.js && node --check server/transport.js && node --check shared/game-types.js && node --check shared/game-engine.js && node --check client/network-client.js && node --check server/geometry-test.js && node --check server/smoke-test.js && node server/geometry-test.js",
+    "build:web": "node scripts/build-capacitor-web.js",
+    "android:sync": "npx cap sync android",
+    "android:open": "npx cap open android",
+    "android:build": "cd android && gradlew.bat assembleDebug",
+    "migrate": "node server/migrate.js",
+    "check": "node --check server/index.js && node --check server/api-routes.js && node --check server/db.js && node --check server/migrate.js && node --check server/room-manager.js && node --check server/game-session.js && node --check server/transport.js && node --check shared/game-types.js && node --check shared/game-engine.js && node --check client/network-client.js && node --check server/services/auth.js && node --check server/repositories/user-repo.js && node --check server/repositories/session-repo.js && node --check server/repositories/progress-repo.js && node --check server/geometry-test.js && node --check server/engine-regression-test.js && node --check server/smoke-test.js && node server/geometry-test.js && node server/engine-regression-test.js",
     "smoke": "node server/smoke-test.js"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
+    "argon2": "^0.45.1",
+    "dotenv": "^17.4.2",
+    "pg": "^8.22.0",
     "ws": "^8.18.0"
   }
 }

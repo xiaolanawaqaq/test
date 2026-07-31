@@ -10,7 +10,7 @@
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body { height:100%; height:100dvh; background:#1a1d29; color:#e8ebf0;
     font-family:"Segoe UI","Microsoft YaHei",sans-serif; overflow:hidden;
-    touch-action:none; overscroll-behavior:none; }
+    touch-action:manipulation; overscroll-behavior:none; }
   #wrap { display:flex; flex-direction:column; align-items:center; justify-content:center;
     width:100%; height:100%; height:100dvh; max-width:100vw; user-select:none;
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
@@ -40,7 +40,7 @@
     text-orientation:upright; letter-spacing:2px; flex:0 0 auto; }
   #trayItems { display:flex; gap:8px; flex:1; overflow-x:auto; height:100%;
     align-items:center; -webkit-overflow-scrolling:touch; touch-action:pan-x; }
-  .trayTroop { touch-action:none; flex:0 0 auto; }
+  .trayTroop { touch-action:pan-x; flex:0 0 auto; }
   #msg { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
     background:rgba(15,20,12,.94); border:2px solid #5a7a48; border-radius:14px;
     padding:22px 28px; text-align:center; display:none; z-index:50;
@@ -437,7 +437,7 @@ function renderTray(){
       "display:flex;flex-direction:column;align-items:center;justify-content:center;"+
       "background:linear-gradient(180deg,#2a3040 0%,#222830 100%);border:2px solid "+border+";"+
       "position:relative;padding:5px 3px;"+
-      "touch-action:none;user-select:none;-webkit-user-select:none;"+
+      "touch-action:pan-x;user-select:none;-webkit-user-select:none;"+
       "box-shadow:0 2px 8px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.06);";
     el.innerHTML=
       '<div style="font-size:20px;line-height:1;pointer-events:none;filter:drop-shadow(0 2px 2px rgba(0,0,0,.5))">'+tr.type.icon+'</div>'+
@@ -1510,16 +1510,26 @@ function endDrag(clientX, clientY){
   hideGhost();
 }
 
-// 待命区：手指/鼠标按住拖到战场
+// 待命区：鼠标立即拖拽；触摸/笔先判断横向滚动还是纵向部署
+const TRAY_GESTURE_THRESHOLD=8;
+let pendingTrayGesture=null;
 trayEl.addEventListener("pointerdown", e=>{
-  const el=e.target.closest(".trayTroop"); if(!el) return;
-  // 横滑列表时不抢手势：只有明显按住某张卡才开拖
+  const el=e.target.closest(".trayTroop"); if(!el || drag.active || pendingTrayGesture) return;
   const id=+el.dataset.id;
   const idx=tray.findIndex(t=>t.id===id);
   if(idx<0) return;
-  e.preventDefault();
-  el.setPointerCapture?.(e.pointerId);
-  beginDragTroop(tray[idx], {type:"tray",idx}, e.clientX, e.clientY, e.pointerId);
+  if(e.pointerType==="mouse"){
+    e.preventDefault();
+    el.setPointerCapture?.(e.pointerId);
+    beginDragTroop(tray[idx], {type:"tray",idx}, e.clientX, e.clientY, e.pointerId);
+    return;
+  }
+  if(e.pointerType==="touch" || e.pointerType==="pen"){
+    pendingTrayGesture={
+      pointerId:e.pointerId, startX:e.clientX, startY:e.clientY,
+      el, troop:tray[idx], from:{type:"tray",idx}
+    };
+  }
 });
 
 // 战场：拖起已有兵 / 合成
@@ -1538,6 +1548,22 @@ canvas.addEventListener("pointerdown", e=>{
 });
 
 window.addEventListener("pointermove", e=>{
+  if(pendingTrayGesture && e.pointerId===pendingTrayGesture.pointerId){
+    const dx=e.clientX-pendingTrayGesture.startX;
+    const dy=e.clientY-pendingTrayGesture.startY;
+    if(Math.hypot(dx,dy)<TRAY_GESTURE_THRESHOLD) return;
+    if(Math.abs(dx)>Math.abs(dy)){
+      pendingTrayGesture=null;
+      return;
+    }
+    if(Math.abs(dy)<=Math.abs(dx)) return;
+    const pending=pendingTrayGesture;
+    pendingTrayGesture=null;
+    pending.el.setPointerCapture?.(e.pointerId);
+    e.preventDefault();
+    beginDragTroop(pending.troop, pending.from, e.clientX, e.clientY, e.pointerId);
+    return;
+  }
   if(!drag.active){
     // 仅鼠标悬停展示描述；触屏靠点击
     if(e.pointerType==="mouse"){
@@ -1553,12 +1579,20 @@ window.addEventListener("pointermove", e=>{
 });
 
 window.addEventListener("pointerup", e=>{
+  if(pendingTrayGesture && e.pointerId===pendingTrayGesture.pointerId){
+    pendingTrayGesture=null;
+    return;
+  }
   if(!drag.active) return;
   if(drag.pointerId!=null && e.pointerId!==drag.pointerId) return;
   e.preventDefault();
   endDrag(e.clientX, e.clientY);
 });
 window.addEventListener("pointercancel", e=>{
+  if(pendingTrayGesture && e.pointerId===pendingTrayGesture.pointerId){
+    pendingTrayGesture=null;
+    return;
+  }
   if(!drag.active) return;
   if(drag.pointerId!=null && e.pointerId!==drag.pointerId) return;
   returnTroop();
