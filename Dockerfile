@@ -2,7 +2,7 @@ FROM node:20-slim
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-       gcc libsodium-dev pkg-config \
+       python3 make gcc libsodium-dev pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
