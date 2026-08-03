@@ -1,0 +1,10 @@
+{
+  "appId": "com.tafangames.mergetd",
+  "appName": "合兵塔防",
+  "webDir": "www",
+  "backgroundColor": "#0a1008",
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true
+  }
+}
