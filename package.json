@@ -4,6 +4,9 @@
   "private": true,
   "description": "Three-player online co-op server for Merge TD",
   "main": "server/index.js",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "start": "node server/index.js",
     "build:web": "node scripts/build-capacitor-web.js",
@@ -18,7 +21,6 @@
     "@capacitor/android": "^8.5.0",
     "@capacitor/cli": "^8.5.0",
     "@capacitor/core": "^8.5.0",
-    "argon2": "^0.45.1",
     "dotenv": "^17.4.2",
     "pg": "^8.22.0",
     "ws": "^8.18.0"

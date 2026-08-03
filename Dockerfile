@@ -1,14 +1,9 @@
-FROM node:20-slim
-
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-       python3 python-is-python3 make gcc libsodium-dev pkg-config \
-    && rm -rf /var/lib/apt/lists/*
+FROM node:22-slim
 
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci --production=false
+RUN npm ci
 
 COPY . .
 
