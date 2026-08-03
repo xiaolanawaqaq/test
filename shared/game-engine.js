@@ -253,7 +253,7 @@ function command(state, playerId, message){
     const found=findOwnedTroop(state,playerId,message.troopId);
     if(!found) throw new Error("这不是你的兵");
     const troop=found.troop;
-    const target=Number(message.targetSlot);
+    const target=message.targetSlot;
 
     if(state.mode === "independent"){
       // 独立模式：槽位范围是0~15
@@ -397,7 +397,7 @@ function fireByStyle(ps, slot, tr, tgt){
     for(let i=0;i<n;i++){
       const a=base + (i-(n-1)/2)*(spread/(n-1||1));
       const dist=tr.range*0.85;
-      pushBullet(ps, slot, null, {dmg:tr.dmg, life:0.16, color:"#fde68a", size:2.5, tx:slot.x+Math.cos(a)*dist, ty:slot.y+Math.sin(a)*dist, style:"shotgun", pierce:true});
+      pushBullet(ps, slot, null, {dmg:tr.dmg, life:0.16, color:"#fde68a", size:2.5, tx:slot.x+Math.cos(a)*dist, ty:slot.y+Math.sin(a)*dist, style:"shotgun"});
     }
   } else if(st==="pulse"){
     const r=tr.range*0.92;
@@ -414,7 +414,7 @@ function fireByStyle(ps, slot, tr, tgt){
 function applyHit(ps, bl){
   const findEnemy = (id)=> ps.enemies.find(e=>e.id===id && !e.dead);
 
-  if(bl.pierce || bl.style==="shotgun"){
+  if(bl.pierce){
     let best=null, bestD=1e9;
     for(const e of ps.enemies){
       if(e.dead) continue;
@@ -453,6 +453,27 @@ function applyHit(ps, bl){
     damageEnemy(ps, tgt, bl.dmg, 1);
     if(bl.slow>0){ tgt.slowMul=bl.slow; tgt.slowTimer=1.4; }
   }
+}
+
+function segmentHit(a,b,p,r){
+  const dx=b.x-a.x, dy=b.y-a.y;
+  const lenSq=dx*dx+dy*dy;
+  const t=lenSq?Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/lenSq)):0;
+  return {hit:Math.hypot(p.x-(a.x+dx*t),p.y-(a.y+dy*t))<=r,t};
+}
+
+function hitShotgun(ps,bl,from){
+  let first=null, firstT=Infinity;
+  for(const enemy of ps.enemies){
+    if(enemy.dead) continue;
+    const result=segmentHit(from,bl,enemy,(enemy.bodyR||12)+(bl.size||2));
+    if(result.hit && result.t<firstT){ first=enemy; firstT=result.t; }
+  }
+  if(!first) return false;
+  damageEnemy(ps,first,bl.dmg,1);
+  bl.hit=true;
+  bl.life=0;
+  return true;
 }
 
 // ============ 单路径步进（合作模式 & 独立模式复用） ============
@@ -529,6 +550,7 @@ function stepPath(ps, dt, state){
   // bullets
   for(const bl of ps.bullets){
     bl.life -= dt;
+    const previous={x:bl.x,y:bl.y};
     if(bl.homing && bl.targetId){
       const tgt = ps.enemies.find(e=>e.id===bl.targetId && !e.dead);
       if(tgt){ bl.tx=tgt.x; bl.ty=tgt.y; }
@@ -537,6 +559,7 @@ function stepPath(ps, dt, state){
     const ease = bl.homing ? Math.min(1, t*1.15) : Math.min(1, t*1.5);
     bl.x = bl.sx + (bl.tx-bl.sx)*ease;
     bl.y = bl.sy + (bl.ty-bl.sy)*ease;
+    if(bl.style==="shotgun" && !bl.hit) hitShotgun(ps,bl,previous);
     if(bl.life<=0 && !bl.hit){ bl.hit=true; applyHit(ps, bl); }
   }
   ps.bullets = ps.bullets.filter(b=>b.life>0);
@@ -593,7 +616,7 @@ function step(state, dt){
     // 波次结束检查：所有路径都清完怪
     const need = waveSizeFor(state.level);
     const allCleared = state.paths.every(ps => ps.spawned >= need && ps.enemies.length === 0);
-    if(allCleared){
+    if(!state.over && allCleared){
       if(state.level >= TOTAL_LEVELS){
         state.over = true; state.result = "win";
       } else {
@@ -630,7 +653,7 @@ function step(state, dt){
     if(ps._lost){ state.over=true; state.result="lose"; }
 
     const need = waveSizeFor(state.level);
-    if(state.spawned>=need && state.enemies.length===0){
+    if(!state.over && state.spawned>=need && state.enemies.length===0){
       if(state.level >= TOTAL_LEVELS){
         state.over=true; state.result="win";
       } else {

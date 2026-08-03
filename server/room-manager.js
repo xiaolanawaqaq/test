@@ -3,6 +3,7 @@
 const MAX_PLAYERS = 3;
 const ROOM_CODE_LENGTH = 6;
 const ROOM_TTL_MS = 30 * 60 * 1000;
+const ACTIVE_SEAT_TTL_MS = 120 * 1000;
 
 function randomCode(){
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -63,11 +64,32 @@ class RoomManager {
     if(!room) return;
     room.players.delete(playerId);
     room.touchedAt = Date.now();
-    if(room.hostId === playerId){
-      const next = room.players.keys().next();
-      room.hostId = next.done ? null : next.value;
-    }
+    if(room.hostId === playerId) this.transferHost(room);
     if(room.players.size === 0) this.delete(room);
+  }
+
+  transferHost(room){
+    const next = [...room.players.values()].find(player=>player.connected && !player.abandoned);
+    room.hostId = next ? next.id : null;
+    if(room.session) room.session.hostId = room.hostId;
+  }
+
+  abandonExpiredSeats(room, now=Date.now()){
+    if(!room || !room.session || !room.session.started) return false;
+    let changed = false;
+    for(const player of room.players.values()){
+      if(!player.connected && !player.abandoned && player.disconnectedAt && now-player.disconnectedAt >= ACTIVE_SEAT_TTL_MS){
+        player.abandoned = true;
+        player.resumeToken = null;
+        changed = true;
+      }
+    }
+    if(!room.players.get(room.hostId) || room.players.get(room.hostId).abandoned){
+      const oldHost = room.hostId;
+      this.transferHost(room);
+      changed = changed || oldHost !== room.hostId;
+    }
+    return changed;
   }
 
   delete(room){
@@ -77,9 +99,12 @@ class RoomManager {
 
   cleanup(){
     const now = Date.now();
+    const changed = [];
     for(const room of this.roomsByCode.values()){
+      if(this.abandonExpiredSeats(room,now)) changed.push(room);
       if(room.players.size === 0 && now-room.touchedAt > ROOM_TTL_MS) this.delete(room);
     }
+    return changed;
   }
 }
 

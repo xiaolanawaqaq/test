@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>合兵塔防 · 登录</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;height:100dvh;background:#0a1008;color:#e8f0e0;font-family:"Segoe UI","Microsoft YaHei",sans-serif;overflow:hidden;touch-action:manipulation}
+  body{display:flex;align-items:center;justify-content:center;flex-direction:column;padding:max(20px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+  .panel{width:min(92vw,400px);padding:24px;border-radius:16px;background:rgba(18,21,28,.95);border:1px solid rgba(120,180,80,.25);display:none}
+  .panel.active{display:block}
+  h1{text-align:center;font-size:24px;margin-bottom:6px;color:#7ee787}
+  .sub{text-align:center;font-size:12px;color:#7a8a68;margin-bottom:18px}
+  .row{margin-bottom:12px}
+  label{display:block;font-size:12px;color:#7a8a68;margin-bottom:4px}
+  input{width:100%;min-height:42px;border-radius:10px;border:1px solid #3a4a30;background:#0a1008;color:#e8f0e0;padding:8px 12px;font-size:14px}
+  input:focus{outline:none;border-color:#7ee787}
+  button{width:100%;min-height:44px;border:none;border-radius:10px;background:#3a6a2a;color:#e8f0e0;font-weight:700;font-size:14px;cursor:pointer;margin-bottom:8px;touch-action:manipulation}
+  button.secondary{background:#2a3020}
+  button:disabled{background:#1a2010;color:#5a6a48;cursor:default}
+  .err{color:#f43f5e;font-size:12px;min-height:16px;text-align:center;margin-bottom:8px}
+  .link{text-align:center;font-size:12px;color:#4fd1ff;cursor:pointer;margin-top:6px}
+  .link:hover{text-decoration:underline}
+  #userInfo{text-align:center;margin-bottom:16px}
+  #userInfo .name{font-size:18px;font-weight:700;color:#e8f0e0}
+  #userInfo .tag{font-size:11px;color:#7a8a68;margin-top:2px}
+  #progress{margin-bottom:14px;text-align:center;font-size:12px;color:#7a8a68}
+  #progress strong{color:#e8f0e0}
+  #setupPanel button{margin-top:4px}
+  #setupPanel p{font-size:12px;color:#7a8a68;margin-bottom:8px;text-align:center}
+</style>
+</head>
+<body>
+<div id="guestPanel" class="panel active">
+  <h1>合兵塔防</h1>
+  <div class="sub">塔防合成 · 三人联机</div>
+  <button id="btnGuest">游客开始</button>
+  <div class="link" id="linkRegister">邮箱注册</div>
+  <div class="link" id="linkLogin">邮箱登录</div>
+  <div class="err" id="guestErr"></div>
+</div>
+
+<div id="registerPanel" class="panel">
+  <h1>注册账号</h1>
+  <div class="sub">注册后可保存进度，跨设备同步</div>
+  <div class="row"><label>邮箱</label><input type="email" id="regEmail" placeholder="your@email.com" autocomplete="email"></div>
+  <div class="row"><label>密码（至少8位）</label><input type="password" id="regPassword" placeholder="••••••••" autocomplete="new-password"></div>
+  <div class="row"><label>昵称（选填）</label><input id="regName" maxlength="20" placeholder="你的昵称"></div>
+  <button id="btnRegister">注册</button>
+  <div class="link" id="linkBackGuest">返回游客模式</div>
+  <div class="err" id="regErr"></div>
+</div>
+
+<div id="loginPanel" class="panel">
+  <h1>邮箱登录</h1>
+  <div class="sub">登录后恢复存档和进度</div>
+  <div class="row"><label>邮箱</label><input type="email" id="loginEmail" placeholder="your@email.com" autocomplete="email"></div>
+  <div class="row"><label>密码</label><input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password"></div>
+  <button id="btnLogin">登录</button>
+  <div class="link" id="linkBackGuest2">返回游客模式</div>
+  <div class="err" id="loginErr"></div>
+</div>
+
+<div id="userPanel" class="panel">
+  <h1>合兵塔防</h1>
+  <div class="sub">塔防合成 · 三人联机</div>
+  <div id="userInfo">
+    <div class="name" id="userName"></div>
+    <div class="tag" id="userTag"></div>
+  </div>
+  <div id="progress" style="display:none">
+    <div>总场次 <strong id="pGames">0</strong> · 胜 <strong id="pWins">0</strong></div>
+    <div>最高关卡 <strong id="pLevel">1</strong></div>
+  </div>
+  <button id="btnSolo">单人守卫</button>
+  <button id="btnMulti" class="secondary">三人联机</button>
+  <button id="btnUpgrade" class="secondary" style="display:none">绑定邮箱</button>
+  <button id="btnLogout" class="secondary">退出登录</button>
+  <div class="err" id="userErr"></div>
+</div>
+
+<div id="upgradePanel" class="panel">
+  <h1>绑定邮箱</h1>
+  <div class="sub">游客绑定邮箱后，可跨设备登录并保留进度</div>
+  <div class="row"><label>邮箱</label><input type="email" id="upgEmail" placeholder="your@email.com" autocomplete="email"></div>
+  <div class="row"><label>密码（至少8位）</label><input type="password" id="upgPassword" placeholder="••••••••" autocomplete="new-password"></div>
+  <div class="row"><label>昵称（选填）</label><input id="upgName" maxlength="20" placeholder="你的昵称"></div>
+  <button id="btnUpgrade">绑定</button>
+  <div class="link" id="linkBackUser">返回</div>
+  <div class="err" id="upgErr"></div>
+</div>
+
+<div id="setupPanel" class="panel">
+  <h1>服务器设置</h1>
+  <p>未连接到联机服务器。请输入你的 Railway 公网地址。</p>
+  <div class="row"><label>服务器地址</label><input type="url" id="setupUrl" placeholder="https://merge-td-production.up.railway.app"></div>
+  <button id="btnSetup">保存并连接</button>
+  <div class="err" id="setupErr"></div>
+</div>
+
+<script src="client/app-config.js"></script>
+<script src="client/api-client.js"></script>
+<script src="client/token-store.js"></script>
+<script src="client/auth-client.js"></script>
+<script src="client/native-shell.js"></script>
+<script>
+"use strict";
+
+const panels = {
+  guest: document.getElementById("guestPanel"),
+  register: document.getElementById("registerPanel"),
+  login: document.getElementById("loginPanel"),
+  user: document.getElementById("userPanel"),
+  upgrade: document.getElementById("upgradePanel"),
+  setup: document.getElementById("setupPanel"),
+};
+
+function showPanel(name) {
+  Object.values(panels).forEach(p => p.classList.remove("active"));
+  if (panels[name]) panels[name].classList.add("active");
+}
+
+function setErr(panel, msg) {
+  const el = document.getElementById(panel + "Err");
+  if (el) el.textContent = msg || "";
+}
+
+NativeShell.setStatusBar(true);
+NativeShell.lockOrientation();
+
+async function goToGame() {
+  let base = "./";
+  try {
+    const stored = await TokenStore.load();
+    if (stored.token) base += "?token=" + encodeURIComponent(stored.token);
+  } catch (_) {}
+  location.href = "./index.html";
+}
+
+function goToOnline() {
+  location.href = "./online.html";
+}
+
+if (window.APP_CONFIG && window.APP_CONFIG.needsSetup) {
+  showPanel("setup");
+  document.getElementById("btnSetup").onclick = async () => {
+    const url = document.getElementById("setupUrl").value.trim();
+    if (!url) { setErr("setup", "请输入服务器地址"); return; }
+    try {
+      if (NativeShell.isNative()) {
+        await Capacitor.Preferences.set({ key: "server_url", value: url });
+      }
+      window.APP_CONFIG.apiUrl = url;
+      window.APP_CONFIG.wsUrl = url.replace(/^http/, "ws");
+      window.APP_CONFIG.needsSetup = false;
+      initializeAuth();
+    } catch (_) {
+      setErr("setup", "保存失败，请重试");
+    }
+  };
+} else {
+  initializeAuth();
+}
+
+async function initializeAuth() {
+  const authed = await AuthClient.init();
+  if (authed) {
+    renderUser(AuthClient.getUser());
+    showPanel("user");
+    try {
+      const progress = await AuthClient.getProgress();
+      renderProgress(progress);
+    } catch (_) {}
+  } else {
+    showPanel("guest");
+  }
+}
+
+function renderUser(user) {
+  document.getElementById("userName").textContent = user.displayName || "玩家";
+  const tag = user.guest ? "游客" : "正式账号";
+  document.getElementById("userTag").textContent = tag + " · " + (user.email || "未绑定邮箱");
+  if (user.guest) document.getElementById("btnUpgrade").style.display = "block";
+  else document.getElementById("btnUpgrade").style.display = "none";
+}
+
+function renderProgress(p) {
+  if (!p) return;
+  document.getElementById("progress").style.display = "block";
+  document.getElementById("pGames").textContent = p.gamesPlayed || 0;
+  document.getElementById("pWins").textContent = p.gamesWon || 0;
+  document.getElementById("pLevel").textContent = p.highestLevel || 1;
+}
+
+// Guest
+document.getElementById("btnGuest").onclick = async () => {
+  setErr("guest", "");
+  try {
+    await AuthClient.guestLogin();
+    showPanel("user");
+    renderUser(AuthClient.getUser());
+  } catch (e) { setErr("guest", e.message); }
+};
+
+// Register
+document.getElementById("linkRegister").onclick = () => showPanel("register");
+document.getElementById("btnRegister").onclick = async () => {
+  setErr("reg", "");
+  const email = document.getElementById("regEmail").value.trim();
+  const password = document.getElementById("regPassword").value;
+  const displayName = document.getElementById("regName").value.trim();
+  if (!email || !email.includes("@")) { setErr("reg", "请输入有效邮箱"); return; }
+  if (!password || password.length < 8) { setErr("reg", "密码至少8位"); return; }
+  try {
+    await AuthClient.register(email, password, displayName || undefined);
+    showPanel("user");
+    renderUser(AuthClient.getUser());
+  } catch (e) { setErr("reg", e.message); }
+};
+
+// Login
+document.getElementById("linkLogin").onclick = () => showPanel("login");
+document.getElementById("btnLogin").onclick = async () => {
+  setErr("login", "");
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPassword").value;
+  if (!email || !password) { setErr("login", "请输入邮箱和密码"); return; }
+  try {
+    await AuthClient.login(email, password);
+    showPanel("user");
+    renderUser(AuthClient.getUser());
+    try {
+      const progress = await AuthClient.getProgress();
+      renderProgress(progress);
+    } catch (_) {}
+  } catch (e) { setErr("login", e.message); }
+};
+
+// Back links
+document.getElementById("linkBackGuest").onclick = () => showPanel("guest");
+document.getElementById("linkBackGuest2").onclick = () => showPanel("guest");
+document.getElementById("linkBackUser").onclick = () => showPanel("user");
+
+// User actions
+document.getElementById("btnSolo").onclick = goToGame;
+document.getElementById("btnMulti").onclick = goToOnline;
+document.getElementById("btnLogout").onclick = async () => {
+  await AuthClient.logout();
+  showPanel("guest");
+};
+
+// Upgrade
+document.getElementById("btnUpgrade").onclick = () => showPanel("upgrade");
+document.getElementById("btnUpgrade").onclick = async () => {
+  setErr("upg", "");
+  const email = document.getElementById("upgEmail").value.trim();
+  const password = document.getElementById("upgPassword").value;
+  const displayName = document.getElementById("upgName").value.trim();
+  if (!email || !email.includes("@")) { setErr("upg", "请输入有效邮箱"); return; }
+  if (!password || password.length < 8) { setErr("upg", "密码至少8位"); return; }
+  try {
+    await AuthClient.upgradeGuest(email, password, displayName || undefined);
+    showPanel("user");
+    renderUser(AuthClient.getUser());
+  } catch (e) { setErr("upg", e.message); }
+};
+</script>
+</body>
+</html>

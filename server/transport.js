@@ -1,5 +1,6 @@
 "use strict";
 
+const crypto = require("crypto");
 const {WebSocketServer} = require("ws");
 const {RoomManager} = require("./room-manager");
 const {createSession,publicState,command,step} = require("../shared/game-engine");
@@ -20,12 +21,12 @@ function roomView(room,viewerId){
     inviteToken:room.token,
     hostId:room.hostId,
     gameMode:room.gameMode||"coop",
-    players:[...room.players.values()].map(p=>({id:p.id,name:p.name,ready:!!p.ready,connected:!!p.connected})),
+    players:[...room.players.values()].map(p=>({id:p.id,name:p.name,ready:!!p.ready,connected:!!p.connected,abandoned:!!p.abandoned})),
     state:room.session ? publicState(room.session,viewerId) : null
   };
 }
 
-function attachTransport(server){
+function attachTransport(server, dbReady){
   const rooms = new RoomManager();
   const wss = new WebSocketServer({
     server,
@@ -51,7 +52,22 @@ function attachTransport(server){
 
   function makePlayer(ws,name){
     const id="p"+(++nextPlayer);
-    return {id,name:(String(name||"").trim().slice(0,20)||("玩家"+nextPlayer)),ws,ready:false,connected:true};
+    return {
+      id,name:(String(name||"").trim().slice(0,20)||("玩家"+nextPlayer)),ws,
+      resumeToken:crypto.randomBytes(32).toString("hex"),
+      userId:null,
+      ready:false,connected:true,disconnectedAt:null,abandoned:false
+    };
+  }
+
+  function sendIdentity(ws,room,player,resumed){
+    send(ws,"identity",{playerId:player.id,roomToken:room.token,resumeToken:player.resumeToken,resumed:!!resumed});
+  }
+
+  function validResumeToken(actual,supplied){
+    const value=String(supplied||"");
+    if(!actual || value.length!==actual.length) return false;
+    return crypto.timingSafeEqual(Buffer.from(actual,"utf8"),Buffer.from(value,"utf8"));
   }
 
   function updateRoom(room){
@@ -74,32 +90,50 @@ function attachTransport(server){
     if(!room.session) return;
     broadcast(room,"state",p=>({state:publicState(room.session,p.id)}));
   }
-  function fail(ws,message){ send(ws,"error",{message:String(message.message||message)}); }
+  function fail(ws,message,code){ send(ws,"error",{message:String(message.message||message),...(code?{code}:{})}); }
 
   wss.on("connection",ws=>{
-    const player=makePlayer(ws);
+    let player=null;
     let room=null;
-    send(ws,"hello",{playerId:player.id});
+    send(ws,"hello",{ready:true});
 
     ws.on("message",raw=>{
       let msg;
       try{ msg=JSON.parse(raw.toString()); }catch(e){ return fail(ws,"消息格式错误"); }
+      handleMessage(ws, msg).catch(e => fail(ws, e));
+    });
+
+    async function handleMessage(ws, msg){
       try{
+        if(msg.type==="auth"){
+          if(!dbReady) throw new Error("服务器数据库未就绪");
+          try{
+            const sessionRepo = require("./repositories/session-repo");
+            const user = await sessionRepo.validate(String(msg.token||""));
+            if(!user) throw new Error("无效凭证");
+            if(!player) player = { id: "p"+(++nextPlayer), name: (user.display_name || "玩家"), ws, resumeToken: crypto.randomBytes(32).toString("hex"), userId: user.id, ready: false, connected: true, disconnectedAt: null, abandoned: false };
+            else player.userId = user.id;
+            send(ws,"auth_ok",{});
+          }catch(e){ return fail(ws,"认证失败，请重新登录","auth_failed"); }
+          return;
+        }
         if(msg.type==="create"){
           if(room) throw new Error("已经在房间里");
-          player.name=String(msg.name||player.name).trim().slice(0,20)||player.name;
+          player=makePlayer(ws,msg.name);
           room=rooms.create(player);
           // 设置游戏模式
           if(msg.mode==="independent") room.gameMode="independent";
           ensureSession(room);
+          sendIdentity(ws,room,player,false);
           updateRoom(room); sendState(room); return;
         }
         if(msg.type==="join"){
           if(room) throw new Error("已经在房间里");
-          player.name=String(msg.name||player.name).trim().slice(0,20)||player.name;
-          room=rooms.find(msg.code||msg.token);
-          if(!room) throw new Error("房间不存在");
-          rooms.add(room,player);
+          const target=rooms.find(msg.code||msg.token);
+          if(!target) throw new Error("房间不存在");
+          player=makePlayer(ws,msg.name);
+          rooms.add(target,player);
+          room=target;
           // recreate session when roster changes before start
           if(!room.session || !room.session.started){
             room.session=createSession([...room.players.keys()], Date.now()>>>0, room.gameMode||"coop");
@@ -109,7 +143,35 @@ function attachTransport(server){
               if(sp){ sp.name=p.name; sp.ready=!!p.ready; }
             }
           }
+          sendIdentity(ws,room,player,false);
           updateRoom(room); sendState(room); return;
+        }
+        if(msg.type==="resume"){
+          if(room) return fail(ws,"恢复失败","resume_failed");
+          const target=rooms.find(msg.roomToken);
+          const seat=target && target.players.get(String(msg.playerId||""));
+          rooms.abandonExpiredSeats(target);
+          if(!target || !target.session || !target.session.started || !seat || seat.abandoned ||
+             !validResumeToken(seat.resumeToken,msg.resumeToken)){
+            return fail(ws,"恢复失败","resume_failed");
+          }
+          const oldWs=seat.ws;
+          seat.ws=ws;
+          seat.connected=true;
+          seat.disconnectedAt=null;
+          player=seat;
+          room=target;
+          const enginePlayer=room.session.players.find(p=>p.id===player.id);
+          if(enginePlayer) enginePlayer.connected=true;
+          room.touchedAt=Date.now();
+          if(oldWs && oldWs!==ws){
+            try{ oldWs.close(4001,"resumed elsewhere"); }catch(_){}
+          }
+          sendIdentity(ws,room,player,true);
+          send(ws,"room",roomView(room,player.id));
+          send(ws,"state",{state:publicState(room.session,player.id)});
+          updateRoom(room);
+          return;
         }
         if(!room) throw new Error("请先创建或加入房间");
         if(msg.type==="ready"){
@@ -157,6 +219,10 @@ function attachTransport(server){
         if(msg.type==="leave"){
           if(room){
             const r=room;
+            player.abandoned=true;
+            player.resumeToken=null;
+            const enginePlayer=r.session && r.session.players.find(p=>p.id===player.id);
+            if(enginePlayer) enginePlayer.connected=false;
             rooms.remove(r,player.id);
             if(r.players.size>0){
               if(r.session && !r.session.started){
@@ -172,28 +238,34 @@ function attachTransport(server){
         }
         throw new Error("未知消息");
       }catch(e){ fail(ws,e); }
-    });
+    }
 
     ws.on("close",()=>{
+      // A resumed seat may already be bound to a replacement socket.
+      if(!player || player.ws!==ws) return;
       player.connected=false;
+      player.ws=null;
       if(room){
-        const state=room.session;
+        const closingRoom=room;
+        const state=closingRoom.session;
         if(state){
           const p=state.players.find(x=>x.id===player.id);
           if(p) p.connected=false;
         }
-        // keep seat for short grace; for v1 remove immediately if not started
-        if(!room.session || !room.session.started){
-          rooms.remove(room,player.id);
-          if(room.players.size>0){
-            if(room.session && !room.session.started){
-              room.session=createSession([...room.players.keys()], Date.now()>>>0, room.gameMode||"coop");
-              room.session.hostId=room.hostId;
+        // Before start a disconnect removes the seat; active games retain it briefly.
+        if(!closingRoom.session || !closingRoom.session.started){
+          rooms.remove(closingRoom,player.id);
+          if(closingRoom.players.size>0){
+            if(closingRoom.session && !closingRoom.session.started){
+              closingRoom.session=createSession([...closingRoom.players.keys()], Date.now()>>>0, closingRoom.gameMode||"coop");
+              closingRoom.session.hostId=closingRoom.hostId;
             }
-            updateRoom(room);
+            updateRoom(closingRoom);
           }
         } else {
-          updateRoom(room); sendState(room);
+          player.disconnectedAt=Date.now();
+          closingRoom.touchedAt=Date.now();
+          updateRoom(closingRoom); sendState(closingRoom);
         }
         room=null;
       }
@@ -202,7 +274,11 @@ function attachTransport(server){
 
   const interval=setInterval(()=>{
     try{
-      rooms.cleanup();
+      const changedRooms=rooms.cleanup();
+      for(const changedRoom of changedRooms){
+        updateRoom(changedRoom);
+        sendState(changedRoom);
+      }
       for(const room of rooms.roomsByCode.values()){
         if(!room.session || !room.session.started || room.session.over) continue;
         step(room.session,0.05);

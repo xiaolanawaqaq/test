@@ -52,7 +52,8 @@ for(let i=0;i<3;i++){
   assert.strictEqual(slots.length,INDEPENDENT_SLOT_COUNT);
   assert(slots.every(inside));
   assert.strictEqual(new Set(slots.map(slot=>`${slot.x},${slot.y}`)).size,slots.length);
-  assert(slots.every(slot=>distanceToPath(slot,path)<=125),`path ${i} contains an unreachable slot`);
+  assert(slots.every(slot=>distanceToPath(slot,path)<=81.12),`path ${i} contains an unreachable slot`);
+  assert.deepStrictEqual(slots[15],{x:433,y:760});
   assert(pathLength(path)>0);
 }
 
