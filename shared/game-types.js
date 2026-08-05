@@ -8,6 +8,16 @@ const PREP_SECONDS = 120;
 const START_TROOPS = 5;
 const TROOPS_PER_STAGE = 2;
 const MAX_LEVEL = 6;
+const RULES_VERSION = 2;
+const LEVEL_DAMAGE_MUL = [1.0, 1.85, 2.9, 4.2, 5.8, 7.7];
+const LEVEL_RATE_MUL = [1.0, 1.7, 2.4, 3.1, 3.8, 4.5];
+const UPGRADE_POINTS_PER_STAGE = 2;
+const WEAPON_UPGRADE_MAX = 3;
+const WEAPON_UPGRADE_COSTS = [1, 2, 3];
+const WEAPON_DAMAGE_PER_LEVEL = 0.25;
+const DEFENSE_UPGRADE_MAX = 5;
+const DEFENSE_UPGRADE_COSTS = [2, 3, 4, 5, 6];
+const DEFENSE_HP_PER_LEVEL = 2;
 const CANVAS_WIDTH = 576;
 const CANVAS_HEIGHT = 960;
 const SLOT_COUNT = 32;
@@ -60,6 +70,9 @@ const TROOP_TYPES = [
   {key:"shotgun",  name:"散弹兵", icon:"✳", style:"shotgun", mode:"aoe",    tag:"散弹", desc:"扇形多发弹，近战强", rateMul:1.05, dmgMul:0.38, rangeMul:0.82, pellets:5},
   {key:"robot",    name:"机器人", icon:"🤖", style:"rapid",   mode:"single", tag:"双发", desc:"双连发，均衡单体", rateMul:1.15, dmgMul:0.95, rangeMul:1.0,  burst:2},
   {key:"core",     name:"能量核", icon:"🔵", style:"pulse",   mode:"aoe",    tag:"脉冲", desc:"以自身为中心震波", rateMul:0.55, dmgMul:0.95, rangeMul:1.05},
+  {key:"railgun",  name:"轨道炮", icon:"➤",  style:"rail",    mode:"line",   tag:"贯穿", desc:"远程直线贯穿四个目标", rateMul:0.34, dmgMul:2.35, rangeMul:1.65, pierceCount:4},
+  {key:"miner",    name:"地雷工兵", icon:"◆", style:"mine",    mode:"aoe",    tag:"布雷", desc:"沿路径布雷，接近后爆炸", rateMul:0.44, dmgMul:1.35, rangeMul:1.1, mineRadius:62},
+  {key:"radar",    name:"干扰雷达", icon:"◎", style:"vulnerable", mode:"support", tag:"易伤", desc:"标记目标，使其承受更多伤害", rateMul:0.72, dmgMul:0.42, rangeMul:1.28, vulnerable:0.28},
 ];
 
 function buildSlots(){
@@ -114,7 +127,10 @@ function getIndependentPathLen(pathIndex){
 
 const GameTypes = {
   TOTAL_LEVELS,WAVE_SIZE,START_CRYSTALS,PREP_SECONDS,START_TROOPS,
-  TROOPS_PER_STAGE,MAX_LEVEL,CANVAS_WIDTH,CANVAS_HEIGHT,SLOT_COUNT,CELL,
+  TROOPS_PER_STAGE,MAX_LEVEL,RULES_VERSION,LEVEL_DAMAGE_MUL,LEVEL_RATE_MUL,
+  UPGRADE_POINTS_PER_STAGE,WEAPON_UPGRADE_MAX,WEAPON_UPGRADE_COSTS,WEAPON_DAMAGE_PER_LEVEL,
+  DEFENSE_UPGRADE_MAX,DEFENSE_UPGRADE_COSTS,DEFENSE_HP_PER_LEVEL,
+  CANVAS_WIDTH,CANVAS_HEIGHT,SLOT_COUNT,CELL,
   PATH,PATH_LEN,TROOP_TYPES,SLOT_META,posOnPath,pathLength,
   INDEPENDENT_PATHS,INDEPENDENT_SLOT_META,INDEPENDENT_SLOT_COUNT,
   getIndependentPath,getIndependentSlots,getIndependentPathLen

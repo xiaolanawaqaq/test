@@ -2,7 +2,10 @@
 
 const {
   TOTAL_LEVELS,WAVE_SIZE,START_CRYSTALS,PREP_SECONDS,START_TROOPS,
-  TROOPS_PER_STAGE,MAX_LEVEL,SLOT_COUNT,PATH,PATH_LEN,TROOP_TYPES,SLOT_META,posOnPath,pathLength,
+  TROOPS_PER_STAGE,MAX_LEVEL,RULES_VERSION,LEVEL_DAMAGE_MUL,LEVEL_RATE_MUL,
+  UPGRADE_POINTS_PER_STAGE,WEAPON_UPGRADE_MAX,WEAPON_UPGRADE_COSTS,WEAPON_DAMAGE_PER_LEVEL,
+  DEFENSE_UPGRADE_MAX,DEFENSE_UPGRADE_COSTS,DEFENSE_HP_PER_LEVEL,
+  SLOT_COUNT,PATH,PATH_LEN,TROOP_TYPES,SLOT_META,posOnPath,pathLength,
   INDEPENDENT_PATHS,INDEPENDENT_SLOT_META,INDEPENDENT_SLOT_COUNT,
   getIndependentPath,getIndependentSlots,getIndependentPathLen
 } = require("./game-types");
@@ -20,14 +23,18 @@ function typeByKey(key){
 }
 
 function baseStats(level){
+  const idx=Math.max(0,Math.min(MAX_LEVEL-1,level-1));
   return {
-    range: 90 + level*14,
-    dmg:   6 + level*7,
-    rate:  0.85 + level*0.07,
+    range: 104 + idx*14,
+    dmg:   13 * LEVEL_DAMAGE_MUL[idx],
+    rate:  LEVEL_RATE_MUL[idx],
   };
 }
 
-function makeTroop(level, ownerId, nextId, rng, typeKey){
+function weaponDamageMul(troop){ return 1 + (troop.weaponLevel||0)*WEAPON_DAMAGE_PER_LEVEL; }
+function troopDamage(troop){ return (troop.dmg||1)*weaponDamageMul(troop); }
+
+function makeTroop(level, ownerId, nextId, rng, typeKey, weaponLevel=0){
   const type = typeKey ? typeByKey(typeKey) : TROOP_TYPES[(rng()*TROOP_TYPES.length)|0];
   const b = baseStats(level);
   return {
@@ -52,6 +59,10 @@ function makeTroop(level, ownerId, nextId, rng, typeKey){
     chainR: type.chainR || 0,
     pellets: type.pellets || 0,
     poison: type.poison || 0,
+    pierceCount: type.pierceCount || 0,
+    mineRadius: type.mineRadius || 0,
+    vulnerable: type.vulnerable || 0,
+    weaponLevel: Math.max(0,Math.min(WEAPON_UPGRADE_MAX,weaponLevel|0)),
     cd: 0,
   };
 }
@@ -79,10 +90,23 @@ function makeEnemy(level, nextId, rng, spawnPath){
     x: p0.x, y: p0.y,
     slowMul: 1, slowTimer: 0,
     poisonTimer: 0, poisonDps: 0,
+    vulnerableTimer: 0, vulnerableMul: 1,
     walk: rng()*Math.PI*2,
     color: pal.body, shell: pal.shell, eye: pal.eye,
     dead: false, reached: false,
   };
+}
+
+function makeVariedTroops(count, ownerId, state){
+  let pool=TROOP_TYPES.slice();
+  const result=[];
+  while(result.length<count){
+    if(!pool.length) pool=TROOP_TYPES.slice();
+    const idx=Math.min(pool.length-1,(state.rng()*pool.length)|0);
+    const type=pool.splice(idx,1)[0];
+    result.push(makeTroop(1,ownerId,state.nextId,state.rng,type.key));
+  }
+  return result;
 }
 
 function waveSizeFor(level){
@@ -102,6 +126,7 @@ function createSession(playerIds, seed=Date.now()>>>0, mode="coop"){
     revision: 0,
     tick: 0,
     seed,
+    rulesVersion: RULES_VERSION,
     rng,
     nextId,
     started: false,
@@ -116,6 +141,7 @@ function createSession(playerIds, seed=Date.now()>>>0, mode="coop"){
       id, name:"玩家"+(i+1), ready:false, connected:true,
       pathIndex: mode==="independent" ? i : -1, // 独立模式下每人一条路
     })),
+    upgradePoints: Object.fromEntries(playerIds.map(id=>[id,0])),
   };
 
   if(mode === "independent"){
@@ -131,29 +157,25 @@ function createSession(playerIds, seed=Date.now()>>>0, mode="coop"){
         slots: Array.from({length: INDEPENDENT_SLOT_COUNT}, ()=>null),
         pathLen: pLen,
         crystals: START_CRYSTALS,
-        enemies: [], bullets: [], beams: [], clouds: [], effects: [],
+        crystalsMax: START_CRYSTALS,
+        defenseUpgradeLevel: 0,
+        enemies: [], bullets: [], beams: [], clouds: [], mines: [], effects: [],
         spawned: 0, killed: 0, spawnAcc: 0,
       };
     });
     state.trays = Object.fromEntries(playerIds.map(id=>[id,[]]));
-    for(const playerId of playerIds){
-      for(let i=0;i<START_TROOPS;i++){
-        state.trays[playerId].push(makeTroop(1, playerId, nextId, rng));
-      }
-    }
+    for(const playerId of playerIds) state.trays[playerId]=makeVariedTroops(START_TROOPS,playerId,state);
   } else {
     // 合作模式：共享路径
     state.crystals = START_CRYSTALS;
+    state.crystalsMax = START_CRYSTALS;
+    state.defenseUpgradeLevel = 0;
     state.spawned = 0; state.killed = 0; state.spawnAcc = 0;
     state.enemies = []; state.bullets = []; state.beams = [];
-    state.clouds = []; state.effects = [];
+    state.clouds = []; state.mines = []; state.effects = [];
     state.slots = Array.from({length: SLOT_COUNT}, ()=>null);
     state.trays = Object.fromEntries(playerIds.map(id=>[id,[]]));
-    for(const playerId of playerIds){
-      for(let i=0;i<START_TROOPS;i++){
-        state.trays[playerId].push(makeTroop(1, playerId, nextId, rng));
-      }
-    }
+    for(const playerId of playerIds) state.trays[playerId]=makeVariedTroops(START_TROOPS,playerId,state);
   }
 
   return state;
@@ -164,6 +186,7 @@ function serializeTroop(t){
     id:t.id, ownerId:t.ownerId, level:t.level, typeKey:t.typeKey,
     name:t.name, icon:t.icon, tag:t.tag, desc:t.desc,
     style:t.style, mode:t.mode, range:t.range, dmg:t.dmg, rate:t.rate,
+    weaponLevel:t.weaponLevel||0, damageFinal:troopDamage(t),
   };
 }
 
@@ -209,6 +232,13 @@ function findOwnedTroop(state,ownerId,id){
 function removeFromTray(state,ownerId,id){
   state.trays[ownerId]=(state.trays[ownerId]||[]).filter(t=>t.id!==id);
 }
+function upgradePoints(state,playerId){ return Number(state.upgradePoints[playerId]||0); }
+function spendUpgradePoints(state,playerId,cost){
+  if(upgradePoints(state,playerId)<cost) return false;
+  state.upgradePoints[playerId]-=cost;
+  return true;
+}
+function defenseState(state,playerId){ return state.mode==="independent"?getPlayerPathState(state,playerId):state; }
 
 function command(state, playerId, message){
   if(!message || typeof message.type!=="string") throw new Error("无效命令");
@@ -237,14 +267,39 @@ function command(state, playerId, message){
     if(state.mode==="independent"){
       for(const ps of state.paths){
         ps.spawned=0; ps.killed=0; ps.spawnAcc=0;
-        ps.enemies=[]; ps.bullets=[]; ps.beams=[]; ps.clouds=[]; ps.effects=[];
+        ps.enemies=[]; ps.bullets=[]; ps.beams=[]; ps.clouds=[]; ps.mines=[]; ps.effects=[];
       }
     } else {
       state.spawned=0; state.killed=0; state.spawnAcc=0;
-      state.enemies=[]; state.bullets=[]; state.beams=[]; state.clouds=[]; state.effects=[];
+      state.enemies=[]; state.bullets=[]; state.beams=[]; state.clouds=[]; state.mines=[]; state.effects=[];
     }
     state.revision++;
     return {ok:true,startWave:true};
+  }
+
+  if(message.type==="upgradeWeapon"){
+    if(!state.started || state.over) throw new Error("游戏未开始");
+    const found=findOwnedTroop(state,playerId,String(message.troopId||""));
+    if(!found || found.source!=="slot") throw new Error("请选择已部署的己方单位");
+    const level=found.troop.weaponLevel||0;
+    if(level>=WEAPON_UPGRADE_MAX) throw new Error("武器已满级");
+    if(!spendUpgradePoints(state,playerId,WEAPON_UPGRADE_COSTS[level])) throw new Error("升级点不足");
+    found.troop.weaponLevel=level+1;
+    state.revision++;
+    return {ok:true,weaponLevel:found.troop.weaponLevel};
+  }
+  if(message.type==="upgradeDefense"){
+    if(!state.started || state.over) throw new Error("游戏未开始");
+    const defense=defenseState(state,playerId);
+    if(!defense) throw new Error("城防不存在");
+    const level=defense.defenseUpgradeLevel||0;
+    if(level>=DEFENSE_UPGRADE_MAX) throw new Error("城防已满级");
+    if(!spendUpgradePoints(state,playerId,DEFENSE_UPGRADE_COSTS[level])) throw new Error("升级点不足");
+    defense.defenseUpgradeLevel=level+1;
+    defense.crystalsMax=(defense.crystalsMax||START_CRYSTALS)+DEFENSE_HP_PER_LEVEL;
+    defense.crystals=Math.min(defense.crystalsMax,(defense.crystals||0)+DEFENSE_HP_PER_LEVEL);
+    state.revision++;
+    return {ok:true,defenseLevel:defense.defenseUpgradeLevel,crystalsMax:defense.crystalsMax};
   }
 
   if(message.type==="deploy" || message.type==="move" || message.type==="merge"){
@@ -268,7 +323,7 @@ function command(state, playerId, message){
         removeFromTray(state,playerId,troop.id);
       } else if(existing.ownerId===playerId && existing.level===troop.level && troop.level<MAX_LEVEL){
         if(found.source==="slot") ps.slots[found.slotIndex]=null;
-        ps.slots[target]=makeTroop(troop.level+1, playerId, state.nextId, state.rng);
+        ps.slots[target]=makeTroop(troop.level+1, playerId, state.nextId, state.rng, null, Math.max(existing.weaponLevel||0,troop.weaponLevel||0));
         if(found.source==="tray") removeFromTray(state,playerId,troop.id);
       } else {
         throw new Error("目标槽位不能放置");
@@ -284,7 +339,7 @@ function command(state, playerId, message){
         removeFromTray(state,playerId,troop.id);
       } else if(existing.ownerId===playerId && existing.level===troop.level && troop.level<MAX_LEVEL){
         if(found.source==="slot") state.slots[found.slotIndex]=null;
-        state.slots[target]=makeTroop(troop.level+1, playerId, state.nextId, state.rng);
+        state.slots[target]=makeTroop(troop.level+1, playerId, state.nextId, state.rng, null, Math.max(existing.weaponLevel||0,troop.weaponLevel||0));
         if(found.source==="tray") removeFromTray(state,playerId,troop.id);
       } else {
         throw new Error("目标槽位不能放置");
@@ -300,7 +355,8 @@ function command(state, playerId, message){
 function damageEnemy(ps, e, dmg, mul){
   if(!e || e.dead) return;
   const factor = 1 / (1 + Math.max(0, e.def) * 0.085);
-  const real = Math.max(0.35, (dmg||0) * (mul||1) * factor);
+  const vulnerableMul=e.vulnerableTimer>0?(e.vulnerableMul||1):1;
+  const real = Math.max(0.35, (dmg||0) * (mul||1) * factor * vulnerableMul);
   e.hp -= real;
   if(e.hp<=0){ e.dead=true; ps.killed++; }
 }
@@ -339,22 +395,23 @@ function findTarget(ps, slot, tr){
 
 function fireByStyle(ps, slot, tr, tgt){
   const st = tr.style;
+  const damage=troopDamage(tr);
   if(st==="rapid"){
     const n=tr.burst||3;
     for(let i=0;i<n;i++){
       const jx=(ps._rng()-0.5)*12, jy=(ps._rng()-0.5)*12;
       pushBullet(ps, slot, tgt, {
-        dmg:tr.dmg, life:0.12+i*0.03, color:"#ffe58a", size:2,
+        dmg:damage, life:0.12+i*0.03, color:"#ffe58a", size:2,
         tx:tgt.x+jx, ty:tgt.y+jy, style:"rapid"
       });
     }
   } else if(st==="heavy"){
-    pushBullet(ps, slot, tgt, {dmg:tr.dmg, life:0.22, color:"#fb923c", size:5, style:"heavy"});
+    pushBullet(ps, slot, tgt, {dmg:damage, life:0.22, color:"#fb923c", size:5, style:"heavy"});
   } else if(st==="splash"){
-    pushBullet(ps, slot, tgt, {dmg:tr.dmg, splash:tr.splash, life:0.28, color:"#f97316", size:4, style:"splash", mode:"aoe"});
+    pushBullet(ps, slot, tgt, {dmg:damage, splash:tr.splash, life:0.28, color:"#f97316", size:4, style:"splash", mode:"aoe"});
   } else if(st==="sniper"){
     addEffect(ps, {kind:"laser", x1:slot.x, y1:slot.y, x2:tgt.x, y2:tgt.y, color:"#f43f5e", life:0.15, max:0.15, width:2});
-    damageEnemy(ps, tgt, tr.dmg, 1);
+    damageEnemy(ps, tgt, damage, 1);
   } else if(st==="cone"){
     const ang=Math.atan2(tgt.y-slot.y, tgt.x-slot.x);
     const half=(tr.cone||55)*Math.PI/180;
@@ -365,13 +422,13 @@ function fireByStyle(ps, slot, tr, tgt){
       if(d>tr.range*0.95 || d<8) continue;
       const a=Math.atan2(e.y-slot.y, e.x-slot.x);
       let da=a-ang; while(da>Math.PI) da-=Math.PI*2; while(da<-Math.PI) da+=Math.PI*2;
-      if(Math.abs(da)<=half) damageEnemy(ps, e, tr.dmg, 1);
+      if(Math.abs(da)<=half) damageEnemy(ps, e, damage, 1);
     }
   } else if(st==="chain"){
     const hits=[]; let cur=tgt;
     const maxHops=tr.chain||3, hopR=tr.chainR||95;
     for(let h=0;h<maxHops && cur;h++){
-      hits.push(cur); damageEnemy(ps, cur, tr.dmg*(h===0?1:0.7), 1);
+      hits.push(cur); damageEnemy(ps, cur, damage*(h===0?1:0.7), 1);
       let next=null, best=1e9;
       for(const e of ps.enemies){
         if(e.dead || hits.includes(e)) continue;
@@ -383,13 +440,13 @@ function fireByStyle(ps, slot, tr, tgt){
     }
     if(hits[0]) addEffect(ps, {kind:"laser", x1:slot.x, y1:slot.y, x2:hits[0].x, y2:hits[0].y, color:"#c4b5fd", life:0.15, max:0.15, width:2});
   } else if(st==="beam"){
-    ps.beams.push({id:ps._nextId(), x:slot.x, y:slot.y, tx:tgt.x, ty:tgt.y, targetId:tgt.id, dps:tr.dmg*2.2, life:0.35, color:"#4fd1ff"});
+    ps.beams.push({id:ps._nextId(), x:slot.x, y:slot.y, tx:tgt.x, ty:tgt.y, targetId:tgt.id, dps:damage*2.2, life:0.35, color:"#4fd1ff"});
   } else if(st==="freeze"){
-    pushBullet(ps, slot, tgt, {dmg:tr.dmg, slow:tr.slow||0.4, life:0.2, color:"#7dd3fc", size:4, style:"freeze"});
+    pushBullet(ps, slot, tgt, {dmg:damage, slow:tr.slow||0.4, life:0.2, color:"#7dd3fc", size:4, style:"freeze"});
   } else if(st==="poison"){
-    pushBullet(ps, slot, tgt, {dmg:tr.dmg*0.4, splash:tr.splash, poison:tr.poison||3, life:0.3, color:"#84cc16", size:4, style:"poison", mode:"aoe"});
+    pushBullet(ps, slot, tgt, {dmg:damage*0.4, splash:tr.splash, poison:tr.poison||3, life:0.3, color:"#84cc16", size:4, style:"poison", mode:"aoe"});
   } else if(st==="missile"){
-    pushBullet(ps, slot, tgt, {dmg:tr.dmg, splash:tr.splash, life:0.45, color:"#fbbf24", size:4, style:"missile", mode:"aoe", homing:true});
+    pushBullet(ps, slot, tgt, {dmg:damage, splash:tr.splash, life:0.45, color:"#fbbf24", size:4, style:"missile", mode:"aoe", homing:true});
   } else if(st==="shotgun"){
     const n=tr.pellets||5;
     const base=Math.atan2(tgt.y-slot.y, tgt.x-slot.x);
@@ -397,17 +454,37 @@ function fireByStyle(ps, slot, tr, tgt){
     for(let i=0;i<n;i++){
       const a=base + (i-(n-1)/2)*(spread/(n-1||1));
       const dist=tr.range*0.85;
-      pushBullet(ps, slot, null, {dmg:tr.dmg, life:0.16, color:"#fde68a", size:2.5, tx:slot.x+Math.cos(a)*dist, ty:slot.y+Math.sin(a)*dist, style:"shotgun"});
+      pushBullet(ps, slot, null, {dmg:damage, life:0.16, color:"#fde68a", size:2.5, tx:slot.x+Math.cos(a)*dist, ty:slot.y+Math.sin(a)*dist, style:"shotgun"});
     }
   } else if(st==="pulse"){
     const r=tr.range*0.92;
     addEffect(ps, {kind:"ring", x:slot.x, y:slot.y, r, life:0.28, max:0.28, color:"#60a5fa"});
     for(const e of ps.enemies){
       if(e.dead) continue;
-      if(Math.hypot(e.x-slot.x, e.y-slot.y)<=r) damageEnemy(ps, e, tr.dmg, 1);
+      if(Math.hypot(e.x-slot.x, e.y-slot.y)<=r) damageEnemy(ps, e, damage, 1);
     }
+  } else if(st==="rail"){
+    const len=Math.hypot(tgt.x-slot.x,tgt.y-slot.y)||1;
+    const end={x:slot.x+(tgt.x-slot.x)/len*tr.range,y:slot.y+(tgt.y-slot.y)/len*tr.range};
+    const candidates=[];
+    for(const e of ps.enemies){
+      if(e.dead) continue;
+      const hit=segmentHit(slot,end,e,(e.bodyR||12)+8);
+      if(hit.hit) candidates.push({enemy:e,t:hit.t});
+    }
+    candidates.sort((a,b)=>a.t-b.t);
+    candidates.slice(0,tr.pierceCount||4).forEach((entry,i)=>damageEnemy(ps,entry.enemy,damage,Math.max(0.55,1-i*0.12)));
+    addEffect(ps,{kind:"line",x1:slot.x,y1:slot.y,x2:end.x,y2:end.y,life:0.18,max:0.18,color:"#ff5f56",width:6});
+  } else if(st==="mine"){
+    const pos=posOnPath((tgt.dist||0)+42,ps.path);
+    ps.mines.push({id:ps._nextId(),x:pos.x,y:pos.y,r:tr.mineRadius||62,dmg:damage,life:8,armed:0.35,ownerId:tr.ownerId});
+  } else if(st==="vulnerable"){
+    damageEnemy(ps,tgt,damage,1);
+    tgt.vulnerableMul=Math.max(tgt.vulnerableMul||1,1+(tr.vulnerable||0.28));
+    tgt.vulnerableTimer=Math.max(tgt.vulnerableTimer||0,2.8);
+    addEffect(ps,{kind:"ring",x:tgt.x,y:tgt.y,r:22,life:0.35,max:0.35,color:"#ff4d8d"});
   } else {
-    pushBullet(ps, slot, tgt, {dmg:tr.dmg, life:0.18, color:"#ffe58a", size:3});
+    pushBullet(ps, slot, tgt, {dmg:damage, life:0.18, color:"#ffe58a", size:3});
   }
 }
 
@@ -501,6 +578,10 @@ function stepPath(ps, dt, state){
       if(e.hp<=0){ e.dead=true; ps.killed++; continue; }
       if(e.poisonTimer<=0) e.poisonDps=0;
     }
+    if(e.vulnerableTimer>0){
+      e.vulnerableTimer-=dt;
+      if(e.vulnerableTimer<=0) e.vulnerableMul=1;
+    }
     e.dist += e.speed * e.slowMul * dt;
     e.walk = (e.walk||0) + dt * 10 * e.slowMul;
     const pos = posOnPath(e.dist, ps.path);
@@ -526,6 +607,19 @@ function stepPath(ps, dt, state){
     }
   }
   ps.clouds = ps.clouds.filter(c=>c.life>0);
+
+  for(const mine of ps.mines){
+    mine.life-=dt;
+    mine.armed=Math.max(0,(mine.armed||0)-dt);
+    if(mine.life<=0 || mine.armed>0) continue;
+    const triggered=ps.enemies.some(e=>!e.dead&&Math.hypot(e.x-mine.x,e.y-mine.y)<=22);
+    if(triggered){
+      for(const e of ps.enemies) if(!e.dead&&Math.hypot(e.x-mine.x,e.y-mine.y)<=mine.r) damageEnemy(ps,e,mine.dmg,1);
+      addEffect(ps,{kind:"ring",x:mine.x,y:mine.y,r:mine.r,life:0.3,max:0.3,color:"#ffb020"});
+      mine.life=0;
+    }
+  }
+  ps.mines=ps.mines.filter(m=>m.life>0);
 
   // beams
   for(const beam of ps.beams){
@@ -571,6 +665,14 @@ function stepPath(ps, dt, state){
   if(ps.effects.length>160) ps.effects=ps.effects.slice(-80);
   if(ps.clouds.length>40) ps.clouds=ps.clouds.slice(-20);
   if(ps.beams.length>40) ps.beams=ps.beams.slice(-20);
+  if(ps.mines.length>48) ps.mines=ps.mines.slice(-32);
+}
+
+function rewardStage(state){
+  for(const id of Object.keys(state.trays)){
+    state.upgradePoints[id]=upgradePoints(state,id)+UPGRADE_POINTS_PER_STAGE;
+    state.trays[id].push(...makeVariedTroops(TROOPS_PER_STAGE,id,state));
+  }
 }
 
 // ============ 主步进函数 ============
@@ -585,11 +687,11 @@ function step(state, dt){
       if(state.mode==="independent"){
         for(const ps of state.paths){
           ps.spawned=0; ps.killed=0; ps.spawnAcc=0;
-          ps.enemies=[]; ps.bullets=[]; ps.beams=[]; ps.clouds=[]; ps.effects=[];
+          ps.enemies=[]; ps.bullets=[]; ps.beams=[]; ps.clouds=[]; ps.mines=[]; ps.effects=[];
         }
       } else {
         state.spawned=0; state.killed=0; state.spawnAcc=0;
-        state.enemies=[]; state.bullets=[]; state.beams=[]; state.clouds=[]; state.effects=[];
+        state.enemies=[]; state.bullets=[]; state.beams=[]; state.clouds=[]; state.mines=[]; state.effects=[];
       }
     }
     state.revision++;
@@ -625,29 +727,25 @@ function step(state, dt){
         state.prepTimer = PREP_SECONDS;
         for(const ps of state.paths){
           ps.spawned=0; ps.killed=0; ps.spawnAcc=0;
-          ps.bullets=[]; ps.beams=[]; ps.clouds=[]; ps.effects=[];
+          ps.bullets=[]; ps.beams=[]; ps.clouds=[]; ps.mines=[]; ps.effects=[];
         }
-        for(const id of Object.keys(state.trays)){
-          for(let i=0;i<TROOPS_PER_STAGE;i++){
-            state.trays[id].push(makeTroop(1, id, state.nextId, state.rng));
-          }
-        }
+        rewardStage(state);
       }
     }
   } else {
     // 合作模式：原有逻辑
     const ps = {
       enemies: state.enemies, bullets: state.bullets, beams: state.beams,
-      clouds: state.clouds, effects: state.effects,
+      clouds: state.clouds, mines: state.mines, effects: state.effects,
       slots: state.slots,
       spawned: state.spawned, killed: state.killed, spawnAcc: state.spawnAcc,
-      crystals: state.crystals, path: PATH, pathLen: PATH_LEN,
+      crystals: state.crystals, crystalsMax:state.crystalsMax, path: PATH, pathLen: PATH_LEN,
       _nextId: state.nextId, _rng: state.rng, _slotMeta: SLOT_META,
     };
     stepPath(ps, dt, state);
     // 回写
     state.enemies=ps.enemies; state.bullets=ps.bullets; state.beams=ps.beams;
-    state.clouds=ps.clouds; state.effects=ps.effects;
+    state.clouds=ps.clouds; state.mines=ps.mines; state.effects=ps.effects;
     state.spawned=ps.spawned; state.killed=ps.killed; state.spawnAcc=ps.spawnAcc;
     state.crystals=ps.crystals;
     if(ps._lost){ state.over=true; state.result="lose"; }
@@ -661,12 +759,8 @@ function step(state, dt){
         state.phase="prep";
         state.prepTimer=PREP_SECONDS;
         state.spawned=0; state.killed=0; state.spawnAcc=0;
-        state.bullets=[]; state.beams=[]; state.clouds=[]; state.effects=[];
-        for(const id of Object.keys(state.trays)){
-          for(let i=0;i<TROOPS_PER_STAGE;i++){
-            state.trays[id].push(makeTroop(1, id, state.nextId, state.rng));
-          }
-        }
+        state.bullets=[]; state.beams=[]; state.clouds=[]; state.mines=[]; state.effects=[];
+        rewardStage(state);
       }
     }
   }
@@ -677,6 +771,7 @@ function step(state, dt){
 function publicState(state, viewerId){
   const base = {
     revision: state.revision,
+    rulesVersion: state.rulesVersion||RULES_VERSION,
     tick: state.tick,
     started: state.started,
     over: state.over,
@@ -688,6 +783,7 @@ function publicState(state, viewerId){
     hostId: state.hostId,
     players: state.players.map(p=>({id:p.id, name:p.name, ready:!!p.ready, connected:!!p.connected, pathIndex:p.pathIndex})),
     tray: (state.trays[viewerId]||[]).map(serializeTroop),
+    upgradePoints: upgradePoints(state,viewerId),
   };
 
   if(state.mode === "independent"){
@@ -697,6 +793,8 @@ function publicState(state, viewerId){
 
     if(viewerPs){
       base.crystals = viewerPs.crystals;
+      base.crystalsMax = viewerPs.crystalsMax||START_CRYSTALS;
+      base.defenseUpgradeLevel = viewerPs.defenseUpgradeLevel||0;
       base.spawned = viewerPs.spawned;
       base.killed = viewerPs.killed;
       base.waveSize = waveSizeFor(state.level);
@@ -706,11 +804,12 @@ function publicState(state, viewerId){
         id:e.id, hp:Math.max(0,e.hp), hpMax:e.hpMax,
         x:e.x, y:e.y, color:e.color, shell:e.shell, eye:e.eye,
         bodyR:e.bodyR||12, kind:e.kind||"mite", walk:e.walk||0,
-        slow:e.slowMul<1, poison:e.poisonTimer>0,
+        slow:e.slowMul<1, poison:e.poisonTimer>0, vulnerable:e.vulnerableTimer>0,
       }));
       base.bullets = viewerPs.bullets.map(b=>({id:b.id, x:b.x, y:b.y, sx:b.sx, sy:b.sy, tx:b.tx, ty:b.ty, color:b.color, size:b.size, style:b.style}));
       base.beams = viewerPs.beams.map(b=>({id:b.id, x:b.x, y:b.y, tx:b.tx, ty:b.ty, color:b.color, life:b.life}));
       base.clouds = viewerPs.clouds.map(c=>({id:c.id, x:c.x, y:c.y, r:c.r, life:c.life}));
+      base.mines = viewerPs.mines.map(m=>({id:m.id,x:m.x,y:m.y,r:m.r,life:m.life,armed:m.armed||0}));
       base.effects = viewerPs.effects.map(ef=>({
         id:ef.id, kind:ef.kind, x:ef.x, y:ef.y, r:ef.r,
         x1:ef.x1, y1:ef.y1, x2:ef.x2, y2:ef.y2,
@@ -722,6 +821,8 @@ function publicState(state, viewerId){
       pathIndex: ps.pathIndex,
       ownerId: ps.ownerId,
       crystals: ps.crystals,
+      crystalsMax: ps.crystalsMax||START_CRYSTALS,
+      defenseUpgradeLevel: ps.defenseUpgradeLevel||0,
       spawned: ps.spawned,
       killed: ps.killed,
       slots: ps.slots.map(t=>t?serializeTroop(t):null),
@@ -734,6 +835,7 @@ function publicState(state, viewerId){
       bullets: ps.bullets.map(b=>({id:b.id, x:b.x, y:b.y, sx:b.sx, sy:b.sy, tx:b.tx, ty:b.ty, color:b.color, size:b.size, style:b.style})),
       beams: ps.beams.map(b=>({id:b.id, x:b.x, y:b.y, tx:b.tx, ty:b.ty, color:b.color, life:b.life})),
       clouds: ps.clouds.map(c=>({id:c.id, x:c.x, y:c.y, r:c.r, life:c.life})),
+      mines: ps.mines.map(m=>({id:m.id,x:m.x,y:m.y,r:m.r,life:m.life,armed:m.armed||0})),
       effects: ps.effects.map(ef=>({
         id:ef.id, kind:ef.kind, x:ef.x, y:ef.y, r:ef.r,
         x1:ef.x1, y1:ef.y1, x2:ef.x2, y2:ef.y2,
@@ -746,6 +848,8 @@ function publicState(state, viewerId){
       pathIndex: ps.pathIndex,
       ownerId: ps.ownerId,
       crystals: ps.crystals,
+      crystalsMax: ps.crystalsMax||START_CRYSTALS,
+      defenseUpgradeLevel: ps.defenseUpgradeLevel||0,
       spawned: ps.spawned,
       killed: ps.killed,
       enemyCount: ps.enemies.filter(e=>!e.dead).length,
@@ -754,6 +858,8 @@ function publicState(state, viewerId){
   } else {
     // 合作模式：原有逻辑
     base.crystals = state.crystals;
+    base.crystalsMax = state.crystalsMax||START_CRYSTALS;
+    base.defenseUpgradeLevel = state.defenseUpgradeLevel||0;
     base.spawned = state.spawned;
     base.killed = state.killed;
     base.waveSize = waveSizeFor(state.level);
@@ -767,6 +873,7 @@ function publicState(state, viewerId){
     base.bullets = state.bullets.map(b=>({id:b.id, x:b.x, y:b.y, sx:b.sx, sy:b.sy, tx:b.tx, ty:b.ty, color:b.color, size:b.size, style:b.style}));
     base.beams = state.beams.map(b=>({id:b.id, x:b.x, y:b.y, tx:b.tx, ty:b.ty, color:b.color, life:b.life}));
     base.clouds = state.clouds.map(c=>({id:c.id, x:c.x, y:c.y, r:c.r, life:c.life}));
+    base.mines = state.mines.map(m=>({id:m.id,x:m.x,y:m.y,r:m.r,life:m.life,armed:m.armed||0}));
     base.effects = state.effects.map(ef=>({
       id:ef.id, kind:ef.kind, x:ef.x, y:ef.y, r:ef.r,
       x1:ef.x1, y1:ef.y1, x2:ef.x2, y2:ef.y2,
@@ -777,4 +884,4 @@ function publicState(state, viewerId){
   return base;
 }
 
-module.exports = {createSession, publicState, command, step, allReady};
+module.exports = {createSession, publicState, command, step, allReady, makeTroop, damageEnemy, stepPath, waveSizeFor};

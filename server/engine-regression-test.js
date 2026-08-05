@@ -1,8 +1,8 @@
 "use strict";
 
 const assert=require("assert");
-const {PATH_LEN}=require("../shared/game-types");
-const {createSession,command,step}=require("../shared/game-engine");
+const {PATH_LEN,MAX_LEVEL,LEVEL_RATE_MUL,UPGRADE_POINTS_PER_STAGE,TROOPS_PER_STAGE,WEAPON_UPGRADE_MAX}=require("../shared/game-types");
+const {createSession,command,step,publicState}=require("../shared/game-engine");
 
 function startSession(mode){
   const state=createSession(["a","b","c"],24680,mode);
@@ -110,8 +110,61 @@ for(const mode of ["coop","independent"]){
   assert.strictEqual(pathState.bullets.length,0,"shotgun pellet survived after its first hit");
 }
 
+{
+  const state=startSession("coop");
+  assert.strictEqual(new Set(state.trays.a.map(t=>t.typeKey)).size,5,"opening troops must be varied");
+  const rates=[];
+  for(let level=1;level<=MAX_LEVEL;level++) rates.push(require("../shared/game-engine").makeTroop(level,"a",state.nextId,state.rng,"tank").rate);
+  assert(Math.abs(rates[1]/rates[0]-LEVEL_RATE_MUL[1])<1e-9,"level 2 rate mismatch");
+  assert(Math.abs(rates[5]/rates[0]-LEVEL_RATE_MUL[5])<1e-9,"level 6 rate mismatch");
+
+  const troop=state.trays.a[0];
+  command(state,"a",{type:"deploy",troopId:troop.id,targetSlot:0});
+  state.upgradePoints.a=20;
+  const before=publicState(state,"a").slots[0].damageFinal;
+  command(state,"a",{type:"upgradeWeapon",troopId:troop.id});
+  assert.strictEqual(state.slots[0].weaponLevel,1);
+  assert(Math.abs(publicState(state,"a").slots[0].damageFinal-before*1.25)<1e-9);
+  command(state,"a",{type:"upgradeWeapon",troopId:troop.id});
+  command(state,"a",{type:"upgradeWeapon",troopId:troop.id});
+  assert.strictEqual(state.slots[0].weaponLevel,WEAPON_UPGRADE_MAX);
+  assert.throws(()=>command(state,"a",{type:"upgradeWeapon",troopId:troop.id}),/满级/);
+
+  state.crystals=7;
+  command(state,"a",{type:"upgradeDefense"});
+  assert.strictEqual(state.crystalsMax,12);
+  assert.strictEqual(state.crystals,9);
+
+  state.phase="battle";
+  state.spawned=20;
+  state.enemies=[];
+  const trayBefore=state.trays.a.length;
+  const pointsBefore=state.upgradePoints.a;
+  step(state,0.01);
+  assert.strictEqual(state.upgradePoints.a,pointsBefore+UPGRADE_POINTS_PER_STAGE);
+  assert.strictEqual(state.trays.a.length,trayBefore+TROOPS_PER_STAGE);
+}
+
+{
+  const state=startSession("coop");
+  state.trays.a=[
+    require("../shared/game-engine").makeTroop(1,"a",state.nextId,state.rng,"gun",2),
+    require("../shared/game-engine").makeTroop(1,"a",state.nextId,state.rng,"tank",1),
+  ];
+  const first=state.trays.a[0],second=state.trays.a[1];
+  command(state,"a",{type:"deploy",troopId:first.id,targetSlot:0});
+  command(state,"a",{type:"deploy",troopId:second.id,targetSlot:1});
+  command(state,"a",{type:"merge",troopId:first.id,targetSlot:1});
+  assert.strictEqual(state.slots[1].level,2);
+  assert.strictEqual(state.slots[1].weaponLevel,2);
+  assert.strictEqual(state.slots[0],null);
+}
+
 console.log("ENGINE REGRESSION OK",{
   targetSlotModes:2,
   lossBranches:3,
   sweptShotgun:true,
+  upgrades:true,
+  mergeInheritance:true,
+  variedTroops:true,
 });

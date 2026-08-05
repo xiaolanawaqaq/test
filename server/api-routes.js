@@ -150,9 +150,15 @@ async function apiRouter(req, res) {
 
     if (method === "GET" && path === "/api/me/progress") {
       const token = extractBearer(req);
-      try { await authService.authenticate(token); } catch (e) { return errorResponse(res, e.status, e.code, e.message); }
-      const p = await progressRepo.getOrCreate(token);
-      return json(res, 200, sanitizeUser({}) );
+      let user;
+      try { user = await authService.authenticate(token); } catch (e) { return errorResponse(res, e.status, e.code, e.message); }
+      const p = await progressRepo.getOrCreate(user.id);
+      if (!p) return json(res, 200, { gamesPlayed: 0, gamesWon: 0, highestLevel: 1 });
+      return json(res, 200, {
+        gamesPlayed: p.games_played || 0,
+        gamesWon: p.games_won || 0,
+        highestLevel: p.highest_level || 1,
+      });
     }
 
     if (method === "POST" && path === "/api/progress/solo") {

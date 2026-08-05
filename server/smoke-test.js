@@ -59,6 +59,7 @@ async function main(){
     if(a.hello.playerId!==undefined || b.hello.playerId!==undefined || c.hello.playerId!==undefined){
       throw new Error("hello must not contain playerId");
     }
+    if(a.hello.protocolVersion!==2 || a.hello.rulesVersion!==2) throw new Error("hello version mismatch");
 
     send(a,"create",{name:"房主甲"});
     await waitFor(a,x=>x.identity&&x.room&&x.state,"create identity/state");
@@ -88,6 +89,12 @@ async function main(){
     if(!troop) throw new Error("no A tray troop");
     send(a,"deploy",{troopId:troop.id,targetSlot:0});
     await waitFor(a,x=>x.state.slots[0]&&x.state.slots[0].id===troop.id,"A deploy");
+    const serverRoom=[...transport.rooms.roomsByCode.values()].find(r=>r.code===code);
+    serverRoom.session.upgradePoints[a.identity.playerId]=6;
+    send(a,"upgradeWeapon",{troopId:troop.id});
+    await waitFor(a,x=>x.state.slots[0]&&x.state.slots[0].weaponLevel===1,"A weapon upgrade");
+    send(a,"upgradeDefense",{});
+    await waitFor(a,x=>x.state.defenseUpgradeLevel===1&&x.state.crystalsMax===12,"A defense upgrade");
 
     const troopB=b.state.tray[0];
     if(!troopB) throw new Error("no B tray troop");

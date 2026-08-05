@@ -115,7 +115,8 @@
     <div id="hud">
       <div class="stat"><span class="lbl">关卡</span><span class="val" id="uiLevel">1</span></div>
       <div class="stat"><span class="lbl">妖怪</span><span class="val" id="uiWave">0/20</span></div>
-      <div class="stat"><span class="lbl">水晶</span><span class="val" id="uiCrystals">10</span></div>
+      <div class="stat"><span class="lbl">城防</span><span class="val" id="uiCrystals">10/10</span></div>
+      <div class="stat"><span class="lbl">升级点</span><span class="val" id="uiUpgradePoints">0</span></div>
       <div class="stat"><span class="lbl">阶段</span><span class="val" id="uiPhase">备战</span></div>
       <div class="stat"><span class="lbl">倒计时</span><span class="val" id="uiTimer">--</span></div>
       <div id="playersBar"></div>
@@ -128,6 +129,8 @@
     </div>
     <div id="tray">
       <div class="title">我的待命</div>
+      <button id="btnWeaponUpgrade" class="secondary" disabled>武器升级</button>
+      <button id="btnDefenseUpgrade" class="secondary" disabled>城防升级</button>
       <div id="trayItems"></div>
     </div>
   </div>
@@ -192,6 +195,9 @@ const ui={
   level:document.getElementById("uiLevel"),
   wave:document.getElementById("uiWave"),
   crystals:document.getElementById("uiCrystals"),
+  upgradePoints:document.getElementById("uiUpgradePoints"),
+  weaponUpgrade:document.getElementById("btnWeaponUpgrade"),
+  defenseUpgrade:document.getElementById("btnDefenseUpgrade"),
   phase:document.getElementById("uiPhase"),
   timer:document.getElementById("uiTimer"),
   playersBar:document.getElementById("playersBar"),
@@ -228,6 +234,7 @@ let localTray=[];
 let currentViewPath=-1; // -1=自己的路, 0/1/2=队友的路
 let myPathIndex=-1;
 let gameMode="coop";
+let selectedTroopId=null;
 const drag={active:false,troop:null,from:null,mx:0,my:0,pointerId:null};
 const ghostEl=document.createElement("div");
 ghostEl.style.cssText="position:fixed;pointer-events:none;z-index:80;display:none;width:72px;height:72px;border-radius:12px;background:rgba(44,50,68,.95);border:2px solid #4fd1ff;align-items:center;justify-content:center;flex-direction:column;transform:translate(-50%,-60%)";
@@ -417,7 +424,18 @@ function updateHUD(){
   const renderState=getRenderState()||state;
   ui.level.textContent=state.level;
   ui.wave.textContent=`${renderState.killed||0}/${state.waveSize||WAVE_SIZE}`;
-  ui.crystals.textContent=renderState.crystals;
+  ui.crystals.textContent=`${renderState.crystals||0}/${renderState.crystalsMax||START_CRYSTALS}`;
+  ui.upgradePoints.textContent=String(state.upgradePoints||0);
+  const selected=(renderState.slots||[]).find(t=>t&&t.id===selectedTroopId);
+  if(!selected) selectedTroopId=null;
+  const weaponLevel=selected?(selected.weaponLevel||0):0;
+  const weaponCosts=window.GameTypes.WEAPON_UPGRADE_COSTS||[1,2,3];
+  const defenseCosts=window.GameTypes.DEFENSE_UPGRADE_COSTS||[2,3,4,5,6];
+  const defenseLevel=renderState.defenseUpgradeLevel||0;
+  ui.weaponUpgrade.disabled=!selected||weaponLevel>=3||(state.upgradePoints||0)<(weaponCosts[weaponLevel]||99);
+  ui.weaponUpgrade.textContent=selected?(weaponLevel>=3?"武器已满级":`武器升级 ${weaponCosts[weaponLevel]}点`):"先选单位";
+  ui.defenseUpgrade.disabled=defenseLevel>=5||(state.upgradePoints||0)<(defenseCosts[defenseLevel]||99);
+  ui.defenseUpgrade.textContent=defenseLevel>=5?"城防已满级":`城防Lv${defenseLevel} ${defenseCosts[defenseLevel]}点`;
   ui.phase.textContent=state.phase==="prep"?"备战":(state.phase==="battle"?"进攻":state.phase);
   if(state.phase==="prep"){
     const sec=Math.max(0,Math.ceil(state.prepTimer||0));
@@ -1156,6 +1174,8 @@ canvas.addEventListener("pointerdown", e=>{
   const p=clientToCanvas(e.clientX,e.clientY); if(!p) return;
   const hit=slotAt(p.x,p.y);
   if(hit && hit.slot.troop && hit.slot.troop.ownerId===me.id){
+    selectedTroopId=hit.slot.troop.id;
+    updateHUD();
     e.preventDefault(); canvas.setPointerCapture?.(e.pointerId);
     drag.active=true; drag.troop=hit.slot.troop; drag.from={type:"slot",index:hit.index}; drag.pointerId=e.pointerId;
     drag.mx=p.x; drag.my=p.y;
@@ -1234,6 +1254,10 @@ document.getElementById("btnWave").onclick=()=>{
   if(!state || state.phase!=="prep") return;
   net.send("startWave",{});
 };
+ui.weaponUpgrade.onclick=()=>{
+  if(selectedTroopId) net.send("upgradeWeapon",{troopId:selectedTroopId});
+};
+ui.defenseUpgrade.onclick=()=>net.send("upgradeDefense",{});
 document.getElementById("btnLeave").onclick=()=>{
   explicitLeavePending=true;
   if(!net.send("leave",{})) explicitLeavePending=false;

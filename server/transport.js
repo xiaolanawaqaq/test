@@ -4,6 +4,8 @@ const crypto = require("crypto");
 const {WebSocketServer} = require("ws");
 const {RoomManager} = require("./room-manager");
 const {createSession,publicState,command,step} = require("../shared/game-engine");
+const {RULES_VERSION} = require("../shared/game-types");
+const PROTOCOL_VERSION = 2;
 
 function send(ws,type,payload={}){
   if(ws.readyState===ws.OPEN) ws.send(JSON.stringify({type,...payload}));
@@ -95,7 +97,7 @@ function attachTransport(server, dbReady){
   wss.on("connection",ws=>{
     let player=null;
     let room=null;
-    send(ws,"hello",{ready:true});
+    send(ws,"hello",{ready:true,protocolVersion:PROTOCOL_VERSION,rulesVersion:RULES_VERSION,serverTime:Date.now()});
 
     ws.on("message",raw=>{
       let msg;
@@ -200,7 +202,7 @@ function attachTransport(server, dbReady){
           command(state,player.id,{type:"startWave"});
           sendState(room); return;
         }
-        if(msg.type==="deploy"||msg.type==="move"||msg.type==="merge"){
+        if(msg.type==="deploy"||msg.type==="move"||msg.type==="merge"||msg.type==="upgradeWeapon"||msg.type==="upgradeDefense"){
           const state=ensureSession(room);
           command(state,player.id,msg);
           sendState(room); return;
