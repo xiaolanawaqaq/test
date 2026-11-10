@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<!-- transparent background; golden light core with dust ring -->
+<circle cx="256" cy="256" r="96" fill="#ffd98a"/>
+<circle cx="256" cy="256" r="130" fill="#ffd98a" opacity="0.25"/>
+<circle cx="256" cy="256" r="160" fill="#ffd98a" opacity="0.10"/>
+<!-- dust particles orbiting, energy-colored: blue-white -> gold -> ember red -->
+<circle cx="256" cy="120" r="14" fill="#cfe4ff"/>
+<circle cx="346" cy="160" r="11" fill="#ffe9b8"/>
+<circle cx="392" cy="256" r="15" fill="#cfe4ff"/>
+<circle cx="352" cy="352" r="10" fill="#ffb84d"/>
+<circle cx="256" cy="396" r="13" fill="#cfe4ff"/>
+<circle cx="160" cy="352" r="11" fill="#ffe9b8"/>
+<circle cx="118" cy="256" r="14" fill="#e05a3a"/>
+<circle cx="160" cy="160" r="10" fill="#cfe4ff"/>
+<!-- finer dust scattered -->
+<circle cx="310" cy="98" r="6" fill="#cfe4ff" opacity="0.8"/>
+<circle cx="404" cy="200" r="5" fill="#ffe9b8" opacity="0.8"/>
+<circle cx="382" cy="328" r="6" fill="#e05a3a" opacity="0.8"/>
+<circle cx="300" cy="416" r="5" fill="#cfe4ff" opacity="0.8"/>
+<circle cx="188" cy="414" r="6" fill="#ffe9b8" opacity="0.8"/>
+<circle cx="112" cy="336" r="5" fill="#cfe4ff" opacity="0.8"/>
+<circle cx="98" cy="192" r="6" fill="#ffe9b8" opacity="0.8"/>
+<circle cx="196" cy="102" r="5" fill="#e05a3a" opacity="0.8"/>
+</svg>
